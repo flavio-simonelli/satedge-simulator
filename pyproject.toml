@@ -31,7 +31,6 @@ satedge-workflow-scheduler = { path = "../satedge-workflow-scheduler", editable 
 
 [dependency-groups]
 dev = [
-    "gurobipy>=13,<14",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",

@@ -623,7 +623,6 @@ gurobi = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "gurobipy" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -643,7 +642,6 @@ provides-extras = ["gurobi"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "gurobipy", specifier = ">=13,<14" },
     { name = "mypy", specifier = ">=2.4.1" },
     { name = "pytest", specifier = ">=9.2.0" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
