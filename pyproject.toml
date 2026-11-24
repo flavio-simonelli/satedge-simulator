@@ -1,24 +1,47 @@
 [project]
 name = "satedge-simulator"
 version = "0.1.0"
-description = "Add your description here"
+description = "Discrete-event simulator of workflow scheduling on an edge satellite constellation"
 readme = "README.md"
 authors = [
     { name = "Flavio Simonelli", email = "flavio.simonelli.se@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pydantic>=2.9",
+    "pyyaml>=6",
+    "satedge-workflow-scheduler",
+    "simpy>=4.1,<5",
+]
 
 [project.scripts]
-satedge-simulator = "satedge_simulator:main"
+satedge-simulator = "satedge_simulator.cli:main"
+
+[project.optional-dependencies]
+gurobi = [
+    "gurobipy>=13,<14",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
 
+[tool.uv.sources]
+satedge-workflow-scheduler = { path = "../satedge-workflow-scheduler", editable = true }
+
 [dependency-groups]
 dev = [
+    "gurobipy>=13,<14",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
     "ruff>=0.17.5",
+    "types-pyyaml>=6.0.12.20261122",
 ]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

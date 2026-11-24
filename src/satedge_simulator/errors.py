@@ -1,0 +1,30 @@
+"""Exceptions of the simulator.
+
+Violations of the plan during the execution are not exceptions: they are a result of the
+simulation (see :mod:`satedge_simulator.domain.violations`). The exceptions below signal invalid
+inputs, a planner that fails, or a defect of the simulator itself.
+"""
+
+
+class SimulatorError(Exception):
+    """Base of every exception raised by the simulator."""
+
+
+class ScenarioError(SimulatorError):
+    """The scenario is inconsistent: invalid parameters, duplicate or unknown identifiers."""
+
+
+class DocumentError(ScenarioError):
+    """A scenario file cannot be read or is not valid."""
+
+
+class PlannerError(SimulatorError):
+    """The planner could not produce a decision, or produced an unusable one."""
+
+
+class PlanExecutionError(SimulatorError):
+    """A violation of the plan in strict mode: the simulation stops at the first one."""
+
+
+class StateError(SimulatorError):
+    """Internal inconsistency of the simulator: a defect, not a violation of the plan."""

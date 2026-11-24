@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from satedge-simulator!")
+"""Discrete-event simulator of workflow scheduling on an edge satellite constellation."""
