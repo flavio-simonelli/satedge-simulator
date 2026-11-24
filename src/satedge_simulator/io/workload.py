@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
-from typing import Literal
 
 from pydantic import Field, field_validator
 
 from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
 from satedge_simulator.errors import DocumentError, ScenarioError
 from satedge_simulator.io.base import Document, check_schema_version, read_document
+
+
+class PriorityName(StrEnum):
+    """The priority classes as the workload file spells them."""
+
+    URGENT = "urgent"
+    NON_URGENT = "non_urgent"
+
 
 # Delay after the release within which a request of each class must be delivered, in seconds.
 DEFAULT_MAX_DELIVERY_S: dict[Priority, float] = {
@@ -33,7 +41,7 @@ class RequestDoc(Document):
     """
 
     id: str
-    priority: Literal["urgent", "non_urgent"]
+    priority: PriorityName
     origin: str
     release_s: float
     arrival_s: float | None = None
@@ -70,7 +78,7 @@ def load_workload(path: str | Path) -> tuple[RequestSpec, ...]:
 
 
 def _request(doc: RequestDoc) -> RequestSpec:
-    priority = Priority(doc.priority)
+    priority = Priority[doc.priority.name]
     deadline = doc.deadline_s
     if deadline is None:
         deadline = doc.release_s + DEFAULT_MAX_DELIVERY_S[priority]
