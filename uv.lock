@@ -635,7 +635,7 @@ requires-dist = [
     { name = "gurobipy", marker = "extra == 'gurobi'", specifier = ">=13,<14" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pyyaml", specifier = ">=6" },
-    { name = "satedge-workflow-scheduler", editable = "../satedge-workflow-scheduler" },
+    { name = "satedge-workflow-scheduler", git = "https://github.com/flavio-simonelli/satedge-workflow-scheduler?rev=20d59bcedd2556a6f80d3daad041a76b84493dc8" },
     { name = "simpy", specifier = ">=4.1,<5" },
 ]
 provides-extras = ["gurobi"]
@@ -652,30 +652,10 @@ dev = [
 [[package]]
 name = "satedge-workflow-scheduler"
 version = "0.1.0"
-source = { editable = "../satedge-workflow-scheduler" }
+source = { git = "https://github.com/flavio-simonelli/satedge-workflow-scheduler?rev=20d59bcedd2556a6f80d3daad041a76b84493dc8#20d59bcedd2556a6f80d3daad041a76b84493dc8" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "gurobipy", marker = "extra == 'gurobi'", specifier = ">=13,<14" },
-    { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.9" },
-    { name = "pydantic", specifier = ">=2.9" },
-    { name = "pyyaml", specifier = ">=6" },
-]
-provides-extras = ["gurobi", "plot"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "gurobipy", specifier = ">=13,<14" },
-    { name = "hypothesis", specifier = ">=6.170.15" },
-    { name = "mypy", specifier = ">=2.4.1" },
-    { name = "pytest", specifier = ">=9.2.0" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "ruff", specifier = ">=0.17.5" },
-    { name = "types-pyyaml", specifier = ">=6.0.12.20261122" },
 ]
 
 [[package]]

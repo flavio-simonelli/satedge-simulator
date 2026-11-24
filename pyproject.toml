@@ -27,7 +27,7 @@ requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-satedge-workflow-scheduler = { path = "../satedge-workflow-scheduler", editable = true }
+satedge-workflow-scheduler = { git = "https://github.com/flavio-simonelli/satedge-workflow-scheduler", rev = "20d59bcedd2556a6f80d3daad041a76b84493dc8" }
 
 [dependency-groups]
 dev = [
