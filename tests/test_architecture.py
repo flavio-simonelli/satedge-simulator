@@ -36,3 +36,23 @@ def test_only_the_runtime_imports_simpy(path: Path) -> None:
     if PACKAGE / "runtime" in path.parents:
         return
     assert "simpy" not in _imported_roots(path)
+
+
+def _imported_modules(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            modules.add(node.module)
+    return modules
+
+
+@pytest.mark.parametrize("path", _sources(), ids=lambda p: str(p.relative_to(PACKAGE)))
+def test_the_domain_does_not_depend_on_io(path: Path) -> None:
+    if PACKAGE / "domain" not in path.parents:
+        return
+    assert not any(
+        m.startswith("satedge_simulator.io") for m in _imported_modules(path)
+    )
