@@ -6,7 +6,7 @@ import pytest
 
 from satedge_simulator.domain.intervals import Window
 from satedge_simulator.errors import DocumentError
-from satedge_simulator.io.loading import load_contact_plan
+from satedge_simulator.io.contact_plan import load_contact_plan
 
 VALID = """\
 schema_version: "1.0.0"
