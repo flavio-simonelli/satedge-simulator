@@ -1,0 +1,14 @@
+# Caso di studio: 2 piani da 9 satelliti, una stazione a terra.
+schema_version: "1.0.0"
+kind: ring_constellation
+ground_station: GS
+planes: 2
+satellites_per_plane: 9
+com_index: 0
+horizon_s: 28800
+plmm_capacity_gb: 2000
+hpc_rate_gbps: 1.0
+hpc: {period_s: 5640, duration_s: 300, startup_s: 0}
+intra_link: {capacity_gbps: 1, latency_s: 0.015}
+inter_link: {capacity_gbps: 1, latency_s: 0.015}
+ground_link: {capacity_gbps: 1, latency_s: 0.015}
