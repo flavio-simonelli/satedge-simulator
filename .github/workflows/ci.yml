@@ -24,13 +24,13 @@ jobs:
         run: uv lock --check
 
       - name: Lint
-        run: uv run --locked --no-build ruff check .
+        run: uv run --locked ruff check .
 
       - name: Format
-        run: uv run --locked --no-build ruff format --check .
+        run: uv run --locked ruff format --check .
 
       - name: Type check
-        run: uv run --locked --no-build mypy --strict src tests
+        run: uv run --locked mypy --strict src tests
 
       - name: Tests
-        run: uv run --locked --no-build pytest
+        run: uv run --locked pytest
