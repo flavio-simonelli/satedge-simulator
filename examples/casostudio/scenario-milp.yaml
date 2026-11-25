@@ -1,0 +1,12 @@
+# Scenario del caso studio: 8 ore di costellazione, pianificazione con il MILP.
+schema_version: "1.0.0"
+topology: topology.yaml
+contact_plan: contact_plan.yaml
+workload: workload.yaml
+planner:
+  solver: milp.yaml
+  lead_time_s: null          # null: l'anticipo è il limite di tempo del solver
+simulation:
+  end_s: 28800
+  tolerance_s: 1.0e-4
+  strict: false

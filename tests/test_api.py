@@ -84,3 +84,15 @@ def copy_example(directory: Path) -> Path:
     for file in EXAMPLE.iterdir():
         shutil.copy(file, directory / file.name)
     return directory / "scenario.yaml"
+
+
+def test_the_case_study_runs_with_the_milp_on_gurobi() -> None:
+    pytest.importorskip("gurobipy", reason="the MILP needs Gurobi")
+    result = simulate_file(EXAMPLE / "scenario-milp.yaml")
+    assert result.verified
+    statuses = {r.status for r in result.outcome.records.values()}
+    assert statuses == {RequestStatus.DELIVERED_ON_TIME}
+    # the scenario gives no lead time: it is the time limit of the solver, 60 s
+    assert {e.lead_time_s for e, _ in result.outcome.decisions} == {60.0}
+    assert result.outcome.metrics.epochs.solver_time.max is not None
+    assert result.outcome.metrics.epochs.solver_time.max > 0.0

@@ -1,0 +1,9 @@
+# MILP al livello 6 (con la capacità della PLMM), risolto con Gurobi: serve la licenza.
+schema_version: "1.0.0"
+method: milp
+deadline: hard
+milp:
+  level: 6
+  warm_start: true      # parte dalla soluzione dell'euristica
+limits:
+  time_limit_s: 60      # è anche l'anticipo del calcolo sul contatto
