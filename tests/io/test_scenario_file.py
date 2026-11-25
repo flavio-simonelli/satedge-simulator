@@ -16,7 +16,7 @@ def test_case_study_scenario_loads_completely() -> None:
     assert len(scenario.constellation.satellites) == 18
     assert len(scenario.requests) == 8
     assert scenario.settings.end_s == 28800.0
-    assert scenario.lead_time_s is None
+    assert scenario.lead_time_s == 60.0
     assert loaded.solver_path.name == "solver.yaml"
     assert loaded.solver_path.is_file()
 
