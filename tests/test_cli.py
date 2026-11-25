@@ -54,3 +54,79 @@ def test_argument_errors_are_in_italian(capsys: pytest.CaptureFixture[str]) -> N
     assert capsys.readouterr().err.endswith(
         "errore: mancano gli argomenti obbligatori: scenario\n"
     )
+
+
+STOCHASTIC = SCENARIO.parent / "scenario-stocastico.yaml"
+
+
+def test_replicate_reports_the_estimates_in_italian(tmp_path: Path) -> None:
+    out = io.StringIO()
+    code = main(
+        [
+            "replicate",
+            str(STOCHASTIC),
+            "-n",
+            "2",
+            "--cell",
+            "7200",
+            "--welch",
+            "1",
+            "-o",
+            str(tmp_path),
+        ],
+        out=out,
+    )
+    assert code == 0
+    lines = out.getvalue().splitlines()
+    assert lines[0].startswith("Orizzonte finito: 2 repliche dal seed 123456789")
+    assert any(
+        line.startswith("  utilizzo degli HPC: ") and "(2 repliche)" in line
+        for line in lines
+    )
+    assert (tmp_path / "replications.json").is_file()
+    assert (
+        (tmp_path / "transient.csv")
+        .read_text(encoding="utf-8")
+        .startswith("statistic,start_s")
+    )
+
+
+def test_batch_needs_the_warmup(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        main(["batch", str(STOCHASTIC)])
+    assert "mancano gli argomenti obbligatori: --warmup" in capsys.readouterr().err
+
+
+def test_batch_reports_the_batch_means(tmp_path: Path) -> None:
+    out = io.StringIO()
+    code = main(
+        ["batch", str(STOCHASTIC), "--warmup", "5640", "-b", "4", "-o", str(tmp_path)],
+        out=out,
+    )
+    assert code == 0
+    assert "(4 batch)" in out.getvalue()
+    assert (tmp_path / "batches.csv").is_file()
+
+
+def test_autocorrelation_reports_the_lag_where_it_fades(tmp_path: Path) -> None:
+    out = io.StringIO()
+    code = main(
+        [
+            "autocorrelation",
+            str(STOCHASTIC),
+            "--warmup",
+            "0",
+            "--max-lag",
+            "3",
+            "-o",
+            str(tmp_path),
+        ],
+        out=out,
+    )
+    assert code == 0
+    assert "tempo di risposta dal rilascio (s):" in out.getvalue()
+    assert (
+        (tmp_path / "autocorrelation.csv")
+        .read_text(encoding="utf-8")
+        .startswith("statistic,lag,r")
+    )
