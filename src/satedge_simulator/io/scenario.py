@@ -77,7 +77,9 @@ def load_scenario(path: str | Path) -> LoadedScenario:
     contact_plan = load_contact_plan(
         base / document.contact_plan, horizon_s=document.simulation.end_s
     )
-    constellation = load_topology(base / document.topology, contact_plan)
+    constellation = load_topology(
+        base / document.topology, contact_plan, horizon_s=document.simulation.end_s
+    )
     if document.workload is None and document.workload_model is None:
         raise DocumentError(
             f"{path}: serve un carico, nel file indicato da 'workload' o nel modello "

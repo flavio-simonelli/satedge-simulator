@@ -105,7 +105,7 @@ intra_link: {capacity_gbps: 3, latency_s: 0.1}
 inter_link: {capacity_gbps: 4, latency_s: 0.2}
 ground_link: {capacity_gbps: 5, latency_s: 0.3}
 """
-    spec = TopologyDoc.model_validate(yaml.safe_load(text)).to_spec()
+    spec = TopologyDoc.model_validate(yaml.safe_load(text)).to_spec(500.0)
     assert spec == RingSpec(
         planes=3,
         satellites_per_plane=4,
@@ -121,3 +121,23 @@ ground_link: {capacity_gbps: 5, latency_s: 0.3}
         ground_link=LinkParams(capacity_gbps=5.0, latency_s=0.3),
         ground_station_id="TERRA",
     )
+
+
+def test_without_a_horizon_the_windows_go_to_the_end_of_the_simulation(
+    tmp_path: Path,
+) -> None:
+    text = "\n".join(
+        line for line in VALID.splitlines() if not line.startswith("horizon_s")
+    )
+    constellation = load_topology(
+        write(tmp_path, text + "\n"), contact_plan(), horizon_s=50_000.0
+    )
+    last = constellation.satellites[0].hpc_windows.windows[-1]
+    assert (
+        50_000.0 - 100.0 <= last.start < 50_000.0
+    )  # the windows of VALID repeat every 100 s
+
+
+def test_a_horizon_shorter_than_the_simulation_is_an_error(tmp_path: Path) -> None:
+    with pytest.raises(DocumentError, match="finestre di calcolo fino a"):
+        load_topology(write(tmp_path, VALID), contact_plan(), horizon_s=1e9)

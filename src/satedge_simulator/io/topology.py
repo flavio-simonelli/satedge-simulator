@@ -67,7 +67,7 @@ class TopologyDoc(Document):
     planes: int = 2
     satellites_per_plane: int = 9
     com_index: int = 0
-    horizon_s: float
+    horizon_s: float | None = None
     plmm_capacity_gb: float
     plmm_overrides_gb: dict[str, float] = Field(default_factory=dict)
     hpc_rate_gbps: float = 1.0
@@ -82,13 +82,13 @@ class TopologyDoc(Document):
     def _supported_version(cls, value: str) -> str:
         return check_schema_version(value)
 
-    def to_spec(self) -> RingSpec:
-        """The parameters of the ring, as the builder needs them."""
+    def to_spec(self, horizon_s: float) -> RingSpec:
+        """The parameters of the ring, as the builder needs them, up to ``horizon_s``."""
         return RingSpec(
             planes=self.planes,
             satellites_per_plane=self.satellites_per_plane,
             com_index=self.com_index,
-            horizon_s=self.horizon_s,
+            horizon_s=horizon_s,
             plmm_capacity_gb=self.plmm_capacity_gb,
             hpc_rate_gbps=self.hpc_rate_gbps,
             plmm_overrides_gb=self.plmm_overrides_gb,
@@ -107,11 +107,17 @@ class TopologyDoc(Document):
         )
 
 
-def load_topology(path: str | Path, contact_plan: ContactPlan) -> Constellation:
+def load_topology(
+    path: str | Path, contact_plan: ContactPlan, horizon_s: float | None = None
+) -> Constellation:
     """Read the topology in ``path`` and build the constellation, with the windows of ``contact_plan``.
 
     The ``kind`` field selects the schema and the builder. A kind that is not supported is an
     error that lists the supported ones.
+
+    The computing windows are generated up to the horizon of the file or, if it gives none, up
+    to ``horizon_s``, the end of the simulation. A horizon of the file shorter than
+    ``horizon_s`` is an error: the satellites would stop computing before the end.
 
     Raises:
         DocumentError: If the file cannot be read, its kind is not supported, it does not match
@@ -120,16 +126,28 @@ def load_topology(path: str | Path, contact_plan: ContactPlan) -> Constellation:
     """
     header = read_document(path, TopologyHeader)
     if header.kind == TopologyKind.RING_CONSTELLATION:
-        return _load_ring(path, contact_plan)
+        return _load_ring(path, contact_plan, horizon_s)
     supported = ", ".join(kind.value for kind in TopologyKind)
     raise DocumentError(
         f"{path}: tipo di topologia non supportato {header.kind!r}, supportati: {supported}"
     )
 
 
-def _load_ring(path: str | Path, contact_plan: ContactPlan) -> Constellation:
+def _load_ring(
+    path: str | Path, contact_plan: ContactPlan, horizon_s: float | None
+) -> Constellation:
     document = read_document(path, TopologyDoc)
+    horizon = document.horizon_s if document.horizon_s is not None else horizon_s
+    if horizon is None:
+        raise DocumentError(
+            f"{path}: serve l'orizzonte 'horizon_s' delle finestre di calcolo"
+        )
+    if horizon_s is not None and horizon < horizon_s:
+        raise DocumentError(
+            f"{path}: la topologia genera le finestre di calcolo fino a {horizon:g} s, ma la "
+            f"simulazione dura fino a {horizon_s:g} s"
+        )
     try:
-        return RingConstellationBuilder(document.to_spec(), contact_plan).build()
+        return RingConstellationBuilder(document.to_spec(horizon), contact_plan).build()
     except ScenarioError as error:
         raise DocumentError(f"{path}: {error}") from error
