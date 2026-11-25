@@ -97,7 +97,7 @@ def simulate_file(
         outcome = simulate(scenario, configured.planner, lead, bus)
     findings = verify_as_run(
         scenario.constellation,
-        scenario.requests,
+        outcome.requests,
         outcome.records,
         outcome.decisions,
         outcome.as_run,

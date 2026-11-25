@@ -11,6 +11,7 @@ from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
 from satedge_simulator.domain.plan import EpochPlan
 from satedge_simulator.domain.violations import Violation
 from satedge_simulator.domain.workload import RequestSpec
+from satedge_simulator.errors import StateError
 from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.observe.notifications import (
     EpochPlanned,
@@ -62,16 +63,35 @@ class GroundRuntime:
         self._tolerance_s = tolerance_s
         self._on_violation = on_violation
         self._bus = bus or EventBus()
-        self._specs = {r.id: r for r in requests}
+        self._specs: dict[str, RequestSpec] = {}
         self._records: dict[str, RequestRecord] = {}
         self._runtimes: dict[str, RequestRuntime] = {}
         self._arrived: list[RequestSpec] = []
         self._lost_raw: list[str] = []
         self._decisions: list[tuple[Epoch, PlanningDecision]] = []
-        for spec in self._specs.values():
-            env.process(self._arrive(spec))
-            env.process(self._acquire_raw(spec))
+        for spec in requests:
+            self.submit(spec)
         env.process(self._plan(tuple(epochs)))
+
+    def submit(self, spec: RequestSpec) -> None:
+        """Take ``spec`` among the requests: it arrives and its raw data appear at their instants.
+
+        The requests of the scenario are submitted at the start; a generator of the workload
+        submits each new request at its arrival.
+
+        Raises:
+            StateError: If a request with the same identifier was already submitted.
+        """
+        if spec.id in self._specs:
+            raise StateError(f"la richiesta {spec.id} è già stata ricevuta")
+        self._specs[spec.id] = spec
+        self._env.process(self._arrive(spec))
+        self._env.process(self._acquire_raw(spec))
+
+    @property
+    def requests(self) -> tuple[RequestSpec, ...]:
+        """Every request submitted, in submission order."""
+        return tuple(self._specs.values())
 
     @property
     def records(self) -> Mapping[str, RequestRecord]:
@@ -94,7 +114,7 @@ class GroundRuntime:
         return tuple(self._lost_raw)
 
     def _arrive(self, spec: RequestSpec) -> Generator[simpy.Event, object]:
-        yield self._env.timeout(spec.arrival_s)
+        yield self._env.timeout(max(0.0, spec.arrival_s - self._env.now))
         record = RequestRecord(
             spec.id, history=[(self._env.now, RequestStatus.ARRIVED)]
         )
@@ -104,7 +124,7 @@ class GroundRuntime:
         self._bus.publish(RequestArrived(self._env.now, spec.id))
 
     def _acquire_raw(self, spec: RequestSpec) -> Generator[simpy.Event, object]:
-        yield self._env.timeout(spec.release_s)
+        yield self._env.timeout(max(0.0, spec.release_s - self._env.now))
         record = self._records.get(spec.id)
         if record is not None and record.is_final:
             return  # already rejected or failed: nobody will use the raw data

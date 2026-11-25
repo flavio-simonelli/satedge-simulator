@@ -13,6 +13,7 @@ from satedge_simulator.io.base import Document, check_schema_version, read_docum
 from satedge_simulator.io.contact_plan import load_contact_plan
 from satedge_simulator.io.topology import load_topology
 from satedge_simulator.io.workload import load_workload
+from satedge_simulator.io.workload_model import WorkloadModelDoc
 
 
 class PlannerDoc(Document):
@@ -28,15 +29,20 @@ class SimulationDoc(Document):
     end_s: float
     tolerance_s: float = 1e-4
     strict: bool = False
+    seed: int = 123_456_789
 
 
 class ScenarioDoc(Document):
-    """A scenario file. The paths are relative to the file that contains them."""
+    """A scenario file. The paths are relative to the file that contains them.
+
+    The workload is a file of requests, a stochastic model, or both: at least one is needed.
+    """
 
     schema_version: str
     topology: str
     contact_plan: str
-    workload: str
+    workload: str | None = None
+    workload_model: WorkloadModelDoc | None = None
     planner: PlannerDoc
     simulation: SimulationDoc
 
@@ -70,7 +76,14 @@ def load_scenario(path: str | Path) -> LoadedScenario:
     base = Path(path).parent
     contact_plan = load_contact_plan(base / document.contact_plan)
     constellation = load_topology(base / document.topology, contact_plan)
-    requests = load_workload(base / document.workload)
+    if document.workload is None and document.workload_model is None:
+        raise DocumentError(
+            f"{path}: serve un carico, nel file indicato da 'workload' o nel modello "
+            "'workload_model'"
+        )
+    requests = (
+        load_workload(base / document.workload) if document.workload is not None else ()
+    )
     solver_path = base / document.planner.solver
     if not solver_path.is_file():
         raise DocumentError(
@@ -84,8 +97,14 @@ def load_scenario(path: str | Path) -> LoadedScenario:
                 end_s=document.simulation.end_s,
                 tolerance_s=document.simulation.tolerance_s,
                 strict=document.simulation.strict,
+                seed=document.simulation.seed,
             ),
             lead_time_s=document.planner.lead_time_s,
+            workload_model=(
+                document.workload_model.to_model()
+                if document.workload_model is not None
+                else None
+            ),
         )
     except ScenarioError as error:
         raise DocumentError(f"{path}: {error}") from error

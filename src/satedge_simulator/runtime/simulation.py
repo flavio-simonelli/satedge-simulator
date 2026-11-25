@@ -11,7 +11,9 @@ import simpy
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
 from satedge_simulator.domain.scenario import Scenario
 from satedge_simulator.domain.violations import Violation
+from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.errors import PlanExecutionError, ScenarioError, StateError
+from satedge_simulator.generation.generator import RequestGenerator
 from satedge_simulator.metrics.as_run import AsRun, AsRunCollector
 from satedge_simulator.metrics.epochs import EpochCollector
 from satedge_simulator.metrics.plmm import PlmmCollector
@@ -21,10 +23,12 @@ from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.planning.epochs import Epoch, planning_epochs
 from satedge_simulator.planning.ports import Planner, PlanningDecision
 from satedge_simulator.planning.rolling_planner import RollingPlanner
+from satedge_simulator.rng.rngs import MultiStreamRng
 from satedge_simulator.runtime.ground import GroundRuntime
 from satedge_simulator.runtime.installer import PlanInstaller
 from satedge_simulator.runtime.ledger import DataLedger
 from satedge_simulator.runtime.network import NetworkRuntime
+from satedge_simulator.runtime.source import workload_source
 from satedge_simulator.texts import VIOLATIONS
 
 
@@ -38,6 +42,7 @@ class SimulationOutcome:
             record is final: a request still open at the end is ``UNFINISHED``.
         violations: The violations of the plan, in the order they happened.
         lost_raw: Requests whose raw data did not fit in the PLMM of their origin.
+        requests: Every request of the run, the ones of the scenario and the generated ones.
         decisions: The decision of each epoch in which the planner decided, in order.
         as_run: The executions completed, with their actual instants.
         metrics: The indicators of the simulation.
@@ -47,6 +52,7 @@ class SimulationOutcome:
     records: Mapping[str, RequestRecord]
     violations: tuple[Violation, ...]
     lost_raw: tuple[str, ...]
+    requests: tuple[RequestSpec, ...]
     decisions: tuple[tuple[Epoch, PlanningDecision], ...]
     as_run: AsRun
     metrics: SimulationMetrics
@@ -66,6 +72,9 @@ class Simulation:
             the scenario.
         bus: The bus of the notifications, for subscribers of the caller such as the event log.
             ``None`` creates one.
+        rng: The random number generator of the stochastic workload. ``None`` plants a new one
+            from the seed of the scenario; replications pass the same one, so that each goes on
+            where the previous stopped and no number is used twice.
 
     Raises:
         ScenarioError: If neither the scenario nor the caller gives the lead time.
@@ -77,6 +86,7 @@ class Simulation:
         planner: Planner,
         lead_time_s: float | None = None,
         bus: EventBus | None = None,
+        rng: MultiStreamRng | None = None,
     ) -> None:
         lead = lead_time_s if lead_time_s is not None else scenario.lead_time_s
         if lead is None:
@@ -109,6 +119,14 @@ class Simulation:
             on_violation=_stop if settings.strict else _go_on,
             bus=bus,
         )
+        model = scenario.workload_model
+        if model is not None:
+            generator = RequestGenerator(
+                model, scenario.constellation, rng or MultiStreamRng(settings.seed)
+            )
+            self._env.process(
+                workload_source(self._env, generator, self._ground, settings.end_s)
+            )
         self._ran = False
 
     def run(self) -> SimulationOutcome:
@@ -137,7 +155,7 @@ class Simulation:
         lost_raw = self._ground.lost_raw
         metrics = summarize(
             self._end_s,
-            self._scenario.requests,
+            self._ground.requests,
             records,
             violations,
             (decision.plan for _, decision in decisions),
@@ -152,6 +170,7 @@ class Simulation:
             records=MappingProxyType(dict(records)),
             violations=violations,
             lost_raw=lost_raw,
+            requests=self._ground.requests,
             decisions=decisions,
             as_run=as_run,
             metrics=metrics,

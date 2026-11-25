@@ -1,0 +1,27 @@
+# Scenario del caso studio con il carico generato durante la simulazione, pianificazione euristica.
+# Le distribuzioni sono scelte senza dati reali, ciascuna giustificata dal meccanismo che la genera
+# (vedi src/satedge_simulator/domain/workload_model.py); ogni parametro si può cambiare qui.
+schema_version: "1.0.0"
+topology: topology.yaml
+contact_plan: contact_plan.yaml
+workload_model:
+  arrivals_per_hour: 4             # processo di Poisson degli arrivi a terra
+  urgent_probability: 0.5          # probabilità che una richiesta sia urgente
+  acquisition_delay_s: [0, 5640]   # dall'arrivo al raw disponibile: fase casuale dell'orbita
+  origins: null                    # null: tutti i satelliti tranne i COM
+  raw_size_gb: [2, 12]             # dimensione del raw (caso studio)
+  stages: [1, 3]                   # stadi della pipeline L0->L1, aumentati se un task non entra nella finestra
+  work_s_per_gb: [12, 24]          # tempo di calcolo dell'intera pipeline per Gb di raw
+  intermediate_ratio: [0.8, 1.2]   # output intermedio rispetto al suo input
+  final_output_gb: [0.0001, 0.001] # output finale: meno di 1 Mb
+  deadline_after_release_s:
+    urgent: 7200                   # 2 ore
+    non_urgent: 25200              # 7 ore, al centro di 6-8 ore
+planner:
+  solver: solver.yaml
+  lead_time_s: 60
+simulation:
+  end_s: 28800
+  tolerance_s: 1.0e-4
+  strict: false
+  seed: 123456789                  # stato iniziale del generatore: stesso seed, stesso carico
