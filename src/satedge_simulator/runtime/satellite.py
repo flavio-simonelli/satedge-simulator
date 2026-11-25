@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import simpy
 
-from satedge_simulator.domain.intervals import Window
 from satedge_simulator.domain.topology import Satellite
 from satedge_simulator.runtime.plmm import Plmm
+from satedge_simulator.runtime.windows import WindowClosings
 
 
 class SatelliteRuntime:
@@ -24,27 +24,15 @@ class SatelliteRuntime:
         self.satellite = satellite
         self.hpc = simpy.Resource(env, capacity=1)
         self.plmm = Plmm(env, satellite.plmm_capacity_gb)
-        self._tolerance_s = tolerance_s
-        self._closings: dict[Window, simpy.Event] = {}
+        self._closings = WindowClosings(env, satellite.hpc_windows, tolerance_s)
 
     @property
     def node_id(self) -> str:
         return self.satellite.id
 
     def window_closing(self) -> simpy.Event | None:
-        """The event that fires when the computing window open now closes, tolerance included.
+        """The closing of the computing window open now, or ``None`` if none is open.
 
-        The event is created the first time a window is asked for and then shared, so all the
-        executions in the same window wait for the same event.
-
-        Returns:
-            ``None`` if no computing window is open now.
+        All the executions in the same window share the same event.
         """
-        now = self.env.now
-        window = self.satellite.hpc_windows.containing(now, self._tolerance_s)
-        if window is None:
-            return None
-        if window not in self._closings:
-            closes_at = window.end + self._tolerance_s
-            self._closings[window] = self.env.timeout(closes_at - now)
-        return self._closings[window]
+        return self._closings.closing()

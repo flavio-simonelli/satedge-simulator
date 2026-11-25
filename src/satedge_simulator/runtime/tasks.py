@@ -5,14 +5,13 @@ from __future__ import annotations
 from collections.abc import Callable, Generator
 
 import simpy
-from simpy.resources.resource import Request
 
 from satedge_simulator.domain.plan import PlannedTask
 from satedge_simulator.domain.violations import Violation, ViolationKind
 from satedge_simulator.domain.workload import TaskSpec
 from satedge_simulator.runtime.ledger import DataKey, DataLedger
 from satedge_simulator.runtime.satellite import SatelliteRuntime
-from satedge_simulator.runtime.timing import guarded_wait
+from satedge_simulator.runtime.timing import guarded_request, guarded_wait
 
 Report = Callable[[Violation], None]
 
@@ -136,16 +135,6 @@ def await_input(
     """Wait, within the tolerance, for the input of ``task`` on its satellite."""
     key = DataKey(task.request_id, task.task_index, node.node_id)
     return (yield from guarded_wait(env, ledger.complete_event(key), tolerance_s))
-
-
-def guarded_request(
-    env: simpy.Environment, request: Request, tolerance_s: float
-) -> Generator[simpy.Event, object, bool]:
-    """Wait for a resource request within the tolerance; cancel it if it is not granted."""
-    granted = yield from guarded_wait(env, request, tolerance_s)
-    if not granted:
-        request.cancel()
-    return granted
 
 
 def _violation(

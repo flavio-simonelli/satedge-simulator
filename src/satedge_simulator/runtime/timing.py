@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 
 import simpy
+from simpy.resources.resource import Request
 
 
 def guarded_wait(
@@ -19,3 +20,13 @@ def guarded_wait(
     timer = env.timeout(tolerance_s)
     yield simpy.AnyOf(env, [event, timer])
     return event.triggered
+
+
+def guarded_request(
+    env: simpy.Environment, request: Request, tolerance_s: float
+) -> Generator[simpy.Event, object, bool]:
+    """Wait for a resource request within the tolerance; cancel it if it is not granted."""
+    granted = yield from guarded_wait(env, request, tolerance_s)
+    if not granted:
+        request.cancel()
+    return granted
