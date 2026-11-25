@@ -28,3 +28,11 @@ class PlanExecutionError(SimulatorError):
 
 class StateError(SimulatorError):
     """Internal inconsistency of the simulator: a defect, not a violation of the plan."""
+
+
+class StreamExhaustedError(SimulatorError):
+    """A stream of random numbers used up its share of the cycle of the generator.
+
+    Going on would repeat the numbers of the next stream, so the replications would no longer
+    be independent.
+    """
