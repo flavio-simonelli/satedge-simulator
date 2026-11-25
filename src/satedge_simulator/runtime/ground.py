@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable, Mapping
+from collections.abc import Callable, Generator, Iterable, Mapping
 from types import MappingProxyType
 
 import simpy
 
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
 from satedge_simulator.domain.plan import EpochPlan
+from satedge_simulator.domain.violations import Violation
 from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.planning.epochs import Epoch
 from satedge_simulator.planning.ports import PlanningDecision
@@ -43,6 +44,7 @@ class GroundRuntime:
         ledger: DataLedger,
         installer: PlanInstaller,
         tolerance_s: float,
+        on_violation: Callable[[Violation], None] = lambda _: None,
     ) -> None:
         self._env = env
         self._rolling = rolling
@@ -50,6 +52,7 @@ class GroundRuntime:
         self._ledger = ledger
         self._installer = installer
         self._tolerance_s = tolerance_s
+        self._on_violation = on_violation
         self._specs = {r.id: r for r in requests}
         self._records: dict[str, RequestRecord] = {}
         self._runtimes: dict[str, RequestRuntime] = {}
@@ -130,6 +133,7 @@ class GroundRuntime:
                 self._network.satellites,
                 self._network.constellation.ground_station.id,
                 self._rolling,
+                self._on_violation,
             )
         self._runtimes.update(accepted)
         arrival_s = plan_arrival_times(self._network.constellation, epoch.ready_s)

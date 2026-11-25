@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable
+from collections.abc import Callable, Generator, Iterable
 from typing import Protocol
 
 import simpy
@@ -51,6 +51,7 @@ class RequestRuntime:
         satellites: Iterable[SatelliteRuntime],
         ground: NodeId,
         listener: OutcomeListener,
+        on_violation: Callable[[Violation], None] = lambda _: None,
     ) -> None:
         if record.status is not RequestStatus.ACCEPTED:
             raise StateError(
@@ -61,6 +62,7 @@ class RequestRuntime:
         self._record = record
         self._satellites = tuple(satellites)
         self._listener = listener
+        self._on_violation = on_violation
         self._actions: list[simpy.Process] = []
         self._violations: list[Violation] = []
         final_output = DataKey(request.id, len(request.tasks), ground)
@@ -93,8 +95,13 @@ class RequestRuntime:
         return True
 
     def report(self, violation: Violation) -> None:
-        """Record a violation of an action of the request, and fail the request."""
+        """Record a violation of an action of the request, and fail the request.
+
+        ``on_violation`` hears of the violation first: in strict mode it raises, and the
+        exception stops the simulation.
+        """
         self._violations.append(violation)
+        self._on_violation(violation)
         self.fail()
 
     def fail(self) -> None:
