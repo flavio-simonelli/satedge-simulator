@@ -1,6 +1,5 @@
-"""Tests of the periodic and Orekit kinds of contact plan."""
+"""Tests of the periodic kind of contact plan."""
 
-import json
 from pathlib import Path
 
 import pytest
@@ -47,49 +46,3 @@ def test_periodic_windows_must_not_overlap(tmp_path: Path) -> None:
     )
     with pytest.raises(DocumentError, match="durata < periodo"):
         load_contact_plan(path, horizon_s=1000.0)
-
-
-def orekit_result() -> dict[str, object]:
-    """A result of isl-windows-visibility, with the fields the simulator does not read."""
-    window = {
-        "start": "2026-03-01T00:16:27.450528Z",
-        "end": "2026-03-01T00:30:30.290080Z",
-        "start_offset_s": 987.450528,
-        "end_offset_s": 1830.29008,
-        "min_range_km": 1231.1,
-        "max_range_km": 4524.8,
-        "mean_range_km": 2636.1,
-    }
-    return {
-        "schema_version": "1.1.0",
-        "generator": {"name": "isl-windows-visibility", "version": "0.1.0"},
-        "generated_at": "2026-10-22T15:39:44Z",
-        "config_sha256": "0" * 64,
-        "time_scale": "UTC",
-        "horizon": {"start": "2026-03-01T00:00:00Z", "end": "2026-03-02T00:00:00Z"},
-        "links": [
-            {"node_a": "COM1", "node_b": "COM2", "windows": [window]},
-            {"node_a": "COM1", "node_b": "GS1", "windows": [window]},
-        ],
-    }
-
-
-def test_an_orekit_plan_reads_the_offsets_and_renames_the_nodes(tmp_path: Path) -> None:
-    (tmp_path / "result.json").write_text(json.dumps(orekit_result()), encoding="utf-8")
-    path = tmp_path / "plan.yaml"
-    path.write_text(
-        'schema_version: "1.0.0"\nkind: orekit\nsource: result.json\nnames: {GS1: GS}\n',
-        encoding="utf-8",
-    )
-    plan = load_contact_plan(path)
-    assert plan.windows_of("COM2", "COM1").windows == (Window(987.450528, 1830.29008),)
-    assert plan.windows_of("GS", "COM1").windows == (Window(987.450528, 1830.29008),)
-
-
-def test_a_missing_orekit_result_names_its_file(tmp_path: Path) -> None:
-    path = tmp_path / "plan.yaml"
-    path.write_text(
-        'schema_version: "1.0.0"\nkind: orekit\nsource: absent.json\n', encoding="utf-8"
-    )
-    with pytest.raises(DocumentError, match="absent.json"):
-        load_contact_plan(path)
