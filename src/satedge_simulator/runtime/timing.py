@@ -25,8 +25,19 @@ def guarded_wait(
 def guarded_request(
     env: simpy.Environment, request: Request, tolerance_s: float
 ) -> Generator[simpy.Event, object, bool]:
-    """Wait for a resource request within the tolerance; cancel it if it is not granted."""
-    granted = yield from guarded_wait(env, request, tolerance_s)
+    """Wait for a resource request within the tolerance; cancel it if it is not granted.
+
+    If the caller is interrupted while waiting, the request is cancelled, or released if it was
+    granted at that very instant, before the interruption goes on.
+    """
+    try:
+        granted = yield from guarded_wait(env, request, tolerance_s)
+    except simpy.Interrupt:
+        if request.triggered:
+            request.resource.release(request)
+        else:
+            request.cancel()
+        raise
     if not granted:
         request.cancel()
     return granted

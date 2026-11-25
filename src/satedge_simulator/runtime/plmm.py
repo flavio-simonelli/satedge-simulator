@@ -72,3 +72,8 @@ class Plmm:
         size_gb = self._occupied.pop(key, None)
         if size_gb is not None:
             self._container.get(size_gb)
+
+    def release_request(self, request_id: str) -> None:
+        """Free the memory of every item of ``request_id``, as when the request fails."""
+        for key in [k for k in self._occupied if k.request_id == request_id]:
+            self.release(key)

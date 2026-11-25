@@ -72,7 +72,8 @@ def _execute(
 
     The occupation runs as its own process and races the closing of the window (a watchdog): any
     delay, wherever it builds up, that pushes the end past the window stops the execution with a
-    violation. The occupation must start inside a window.
+    violation. The occupation must start inside a window. If the request fails meanwhile, the
+    occupation is interrupted too, and the interruption goes on to the caller.
     """
     closing = node.window_closing()
     if closing is None:
@@ -81,7 +82,12 @@ def _execute(
     work = env.process(
         _occupy(env, task, node, ledger, report, tolerance_s, spec, input_size_gb)
     )
-    yield work | closing
+    try:
+        yield work | closing
+    except simpy.Interrupt:
+        if work.is_alive:
+            work.interrupt()
+        raise
     if not work.triggered:
         work.interrupt()
         report(_violation(env, task, ViolationKind.HPC_WINDOW))

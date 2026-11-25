@@ -46,6 +46,8 @@ def run_transfer(
 
     The preconditions are: the item is complete on the sender and the channel is free. Each wait
     is bounded by ``tolerance_s``; a late start, within the tolerance, shifts the whole transfer.
+    If the request fails meanwhile, sending and reception are interrupted too, and the
+    interruption goes on to the caller.
 
     Returns:
         ``True`` if the item is complete on the receiver, ``False`` if a violation stopped it.
@@ -68,7 +70,13 @@ def run_transfer(
     reception = env.process(
         _receive(env, transfer, link, receiver, ledger, report, tolerance_s, size_gb)
     )
-    yield reception | closing
+    try:
+        yield reception | closing
+    except simpy.Interrupt:
+        for part in (sending, reception):
+            if part.is_alive:
+                part.interrupt()
+        raise
     if not reception.triggered:
         if sending.is_alive:
             sending.interrupt()
