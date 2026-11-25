@@ -3,7 +3,7 @@
 # (vedi src/satedge_simulator/domain/workload_model.py); ogni parametro si può cambiare qui.
 schema_version: "1.0.0"
 topology: topology.yaml
-contact_plan: contact_plan.yaml
+contact_plan: contact_plan_periodico.yaml
 workload_model:
   arrivals_per_hour: 4             # processo di Poisson degli arrivi a terra
   urgent_probability: 0.5          # probabilità che una richiesta sia urgente

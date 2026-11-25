@@ -121,6 +121,13 @@ class WorkloadModel:
     def mean_interarrival_s(self) -> float:
         return 3600.0 / self.arrivals_per_hour
 
+    @property
+    def longest_life_s(self) -> float:
+        """The longest time from the arrival of a request to its deadline."""
+        return self.acquisition_delay_s.high + max(
+            self.deadline_after_release_s.values()
+        )
+
 
 def _require_positive(r: Range, what: str) -> None:
     if r.low <= 0:

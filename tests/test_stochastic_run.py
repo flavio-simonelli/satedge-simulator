@@ -64,3 +64,22 @@ def test_the_stochastic_example_passes_the_check_against_the_model() -> None:
     result = simulate_file(EXAMPLE)
     assert result.verified
     assert result.outcome.violations == ()
+
+
+def test_the_world_reaches_beyond_the_end_of_the_run() -> None:
+    # the observation stops at 8 h, but a request generated near the end is planned against
+    # the windows after it: they reach the end plus the longest life of a request
+    loaded = load_scenario(EXAMPLE).scenario
+    model = loaded.workload_model
+    assert model is not None
+    assert loaded.world_horizon_s == 28800.0 + model.longest_life_s
+    last_window = max(
+        w.end for s in loaded.constellation.satellites for w in s.hpc_windows
+    )
+    assert last_window > 28800.0 + 25200.0
+
+
+def test_requests_near_the_end_are_not_rejected_for_lack_of_windows() -> None:
+    outcome = run(scenario())
+    rejected = [rid for _, d in outcome.decisions for rid in d.rejected]
+    assert rejected == []

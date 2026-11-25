@@ -7,7 +7,11 @@ from pathlib import Path
 
 from pydantic import field_validator
 
-from satedge_simulator.domain.scenario import Scenario, SimulationSettings
+from satedge_simulator.domain.scenario import (
+    Scenario,
+    SimulationSettings,
+    world_horizon_s,
+)
 from satedge_simulator.errors import DocumentError, ScenarioError
 from satedge_simulator.io.base import Document, check_schema_version, read_document
 from satedge_simulator.io.contact_plan import load_contact_plan
@@ -75,12 +79,6 @@ def load_scenario(path: str | Path) -> LoadedScenario:
     """
     document = read_document(path, ScenarioDoc)
     base = Path(path).parent
-    contact_plan = load_contact_plan(
-        base / document.contact_plan, horizon_s=document.simulation.end_s
-    )
-    constellation = load_topology(
-        base / document.topology, contact_plan, horizon_s=document.simulation.end_s
-    )
     if document.workload is None and document.workload_model is None:
         raise DocumentError(
             f"{path}: serve un carico, nel file indicato da 'workload' o nel modello "
@@ -88,6 +86,19 @@ def load_scenario(path: str | Path) -> LoadedScenario:
         )
     requests = (
         load_workload(base / document.workload) if document.workload is not None else ()
+    )
+    try:
+        model = (
+            document.workload_model.to_model()
+            if document.workload_model is not None
+            else None
+        )
+    except ScenarioError as error:
+        raise DocumentError(f"{path}: {error}") from error
+    horizon = world_horizon_s(document.simulation.end_s, requests, model)
+    contact_plan = load_contact_plan(base / document.contact_plan, horizon_s=horizon)
+    constellation = load_topology(
+        base / document.topology, contact_plan, horizon_s=horizon
     )
     solver_path = base / document.planner.solver
     if not solver_path.is_file():
@@ -105,11 +116,7 @@ def load_scenario(path: str | Path) -> LoadedScenario:
                 seed=document.simulation.seed,
             ),
             lead_time_s=document.planner.lead_time_s,
-            workload_model=(
-                document.workload_model.to_model()
-                if document.workload_model is not None
-                else None
-            ),
+            workload_model=model,
         )
     except ScenarioError as error:
         raise DocumentError(f"{path}: {error}") from error

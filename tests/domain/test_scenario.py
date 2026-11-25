@@ -61,3 +61,12 @@ def test_valid_scenario_keeps_its_parts() -> None:
     )
     assert scenario.lead_time_s is None
     assert scenario.requests[0].origin == "A"
+
+
+def test_the_world_horizon_reaches_the_latest_deadline() -> None:
+    from satedge_simulator.domain.scenario import world_horizon_s
+    from satedge_simulator.domain.workload_model import WorkloadModel
+
+    assert world_horizon_s(100.0, (), None) == 100.0
+    model = WorkloadModel(arrivals_per_hour=1.0)
+    assert world_horizon_s(100.0, (), model) == 100.0 + 5640.0 + 25200.0

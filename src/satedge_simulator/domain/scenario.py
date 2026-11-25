@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from satedge_simulator.domain.topology import Constellation
@@ -44,6 +45,25 @@ class SimulationSettings:
             )
 
 
+def world_horizon_s(
+    end_s: float, requests: Iterable[RequestSpec], model: WorkloadModel | None
+) -> float:
+    """How far the windows of the network must reach for a run that ends at ``end_s``.
+
+    The observation stops at the end, but the constellation does not: a request that arrives
+    near the end is planned against the windows after it, up to its deadline. So the computing
+    windows, the periodic contacts and the horizon of the planner reach the latest deadline a
+    request of the run can have: the deadline of a request of the workload file, or the end
+    plus the longest life of a generated request. Without it, the requests near the end would
+    be rejected only because the windows stop there, and the finite-horizon estimates would be
+    biased.
+    """
+    horizon = max((r.deadline_s for r in requests), default=end_s)
+    if model is not None:
+        horizon = max(horizon, end_s + model.longest_life_s)
+    return max(horizon, end_s)
+
+
 @dataclass(frozen=True, slots=True)
 class Scenario:
     """A complete simulation: the constellation, the workload and the settings.
@@ -76,3 +96,8 @@ class Scenario:
             raise ScenarioError(
                 f"l'anticipo del calcolo deve essere finito e > 0, invece è {self.lead_time_s}"
             )
+
+    @property
+    def world_horizon_s(self) -> float:
+        """How far the windows of the network reach: see :func:`world_horizon_s`."""
+        return world_horizon_s(self.settings.end_s, self.requests, self.workload_model)

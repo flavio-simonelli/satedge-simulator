@@ -5,7 +5,6 @@ ground_station: GS
 planes: 2
 satellites_per_plane: 9
 com_index: 0
-horizon_s: 28800
 plmm_capacity_gb: 2000
 hpc_rate_gbps: 1.0
 hpc: {period_s: 5640, duration_s: 300, startup_s: 0}
