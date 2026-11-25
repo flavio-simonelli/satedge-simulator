@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
 
 from satedge_simulator.domain.topology import NodeId
 from satedge_simulator.errors import ScenarioError
@@ -15,6 +17,13 @@ class Priority(StrEnum):
 
     URGENT = "urgent"
     NON_URGENT = "non_urgent"
+
+
+DEFAULT_DEADLINE_AFTER_RELEASE_S: Mapping[Priority, float] = MappingProxyType(
+    {Priority.URGENT: 7200.0, Priority.NON_URGENT: 25200.0}
+)
+"""Delay after the release within which each class must be delivered, by default: 2 hours for
+the urgent requests, 7 hours, the middle of 6 to 8, for the others."""
 
 
 def _require_finite_at_least(value: float, minimum: float, what: str) -> None:

@@ -12,6 +12,7 @@ from satedge_simulator.errors import DocumentError, ScenarioError
 from satedge_simulator.io.base import Document, check_schema_version, read_document
 from satedge_simulator.io.contact_plan import ContactPlan
 from satedge_simulator.io.ring import (
+    DEFAULT_HPC,
     HpcSchedule,
     LinkParams,
     RingConstellationBuilder,
@@ -42,9 +43,9 @@ class TopologyHeader(BaseModel):
 class HpcDoc(Document):
     """Computing windows of every satellite, in seconds."""
 
-    period_s: float = 5640.0
-    duration_s: float = 300.0
-    startup_s: float = 0.0
+    period_s: float = DEFAULT_HPC.period_s
+    duration_s: float = DEFAULT_HPC.duration_s
+    startup_s: float = DEFAULT_HPC.startup_s
 
 
 class LinkDoc(Document):

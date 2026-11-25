@@ -28,6 +28,11 @@ class WindowedAvailability:
     windows: WindowSet
 
 
+ORBITAL_PERIOD_S = 5640.0
+"""The orbital period of the case study, 94 minutes: the period of the computing windows and the
+revisit time of a target, by default."""
+
+
 type Availability = AlwaysAvailable | WindowedAvailability
 """When a link can carry data."""
 

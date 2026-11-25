@@ -9,6 +9,7 @@ from satedge_simulator.domain.topology import Constellation
 from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.domain.workload_model import WorkloadModel
 from satedge_simulator.errors import ScenarioError
+from satedge_simulator.rng.rngs import DEFAULT_SEED, MODULUS
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,16 +27,16 @@ class SimulationSettings:
     end_s: float
     tolerance_s: float = 1e-4
     strict: bool = False
-    seed: int = 123_456_789
+    seed: int = DEFAULT_SEED
 
     def __post_init__(self) -> None:
         if not (math.isfinite(self.end_s) and self.end_s > 0):
             raise ScenarioError(
                 f"la fine della simulazione deve essere finita e > 0, invece è {self.end_s}"
             )
-        if not 0 < self.seed < 2_147_483_647:
+        if not 0 < self.seed < MODULUS:
             raise ScenarioError(
-                f"il seed deve essere compreso tra 1 e 2147483646, invece è {self.seed}"
+                f"il seed deve essere compreso tra 1 e {MODULUS - 1}, invece è {self.seed}"
             )
         if not (math.isfinite(self.tolerance_s) and self.tolerance_s >= 0):
             raise ScenarioError(

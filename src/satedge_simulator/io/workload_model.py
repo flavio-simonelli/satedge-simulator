@@ -1,59 +1,66 @@
 """The section ``workload_model`` of a scenario: the parameters of the stochastic workload.
 
-Every field has the default of the model; a range is written ``[low, high]``.
+Only the arrival rate is required. A field left out keeps the default of
+:class:`~satedge_simulator.domain.workload_model.WorkloadModel`, which is the only place the
+defaults are written. A range is written ``[low, high]``.
 """
 
 from __future__ import annotations
 
+from typing import Any
+
 from satedge_simulator.domain.workload import Priority
-from satedge_simulator.domain.workload_model import (
-    ORBITAL_PERIOD_S,
-    Range,
-    WorkloadModel,
-)
+from satedge_simulator.domain.workload_model import Range, WorkloadModel
 from satedge_simulator.io.base import Document
+
+_RANGES = (
+    "acquisition_delay_s",
+    "raw_size_gb",
+    "work_s_per_gb",
+    "intermediate_ratio",
+    "final_output_gb",
+)
 
 
 class DeadlinesDoc(Document):
     """Delay after the release within which each class must be delivered, in seconds."""
 
-    urgent: float = 7200.0
-    non_urgent: float = 25200.0
+    urgent: float
+    non_urgent: float
 
 
 class WorkloadModelDoc(Document):
     """The parameters of the stochastic workload, as the scenario writes them."""
 
     arrivals_per_hour: float
-    urgent_probability: float = 0.5
-    acquisition_delay_s: tuple[float, float] = (0.0, ORBITAL_PERIOD_S)
+    urgent_probability: float | None = None
+    acquisition_delay_s: tuple[float, float] | None = None
     origins: list[str] | None = None
-    raw_size_gb: tuple[float, float] = (2.0, 12.0)
-    stages: tuple[int, int] = (1, 3)
-    work_s_per_gb: tuple[float, float] = (12.0, 24.0)
-    intermediate_ratio: tuple[float, float] = (0.8, 1.2)
-    final_output_gb: tuple[float, float] = (0.0001, 0.001)
-    deadline_after_release_s: DeadlinesDoc = DeadlinesDoc()
+    raw_size_gb: tuple[float, float] | None = None
+    stages: tuple[int, int] | None = None
+    work_s_per_gb: tuple[float, float] | None = None
+    intermediate_ratio: tuple[float, float] | None = None
+    final_output_gb: tuple[float, float] | None = None
+    deadline_after_release_s: DeadlinesDoc | None = None
 
     def to_model(self) -> WorkloadModel:
-        """The model of the domain.
+        """The model of the domain, with its defaults for the fields left out.
 
         Raises:
             ScenarioError: If a parameter is out of range.
         """
+        given: dict[str, Any] = self.model_dump(
+            exclude_none=True, exclude={"deadline_after_release_s"}
+        )
+        for name in _RANGES:
+            if name in given:
+                given[name] = Range(*given[name])
+        if "origins" in given:
+            given["origins"] = tuple(given["origins"])
         deadlines = self.deadline_after_release_s
-        return WorkloadModel(
-            arrivals_per_hour=self.arrivals_per_hour,
-            urgent_probability=self.urgent_probability,
-            acquisition_delay_s=Range(*self.acquisition_delay_s),
-            origins=tuple(self.origins) if self.origins is not None else None,
-            raw_size_gb=Range(*self.raw_size_gb),
-            stages=self.stages,
-            work_s_per_gb=Range(*self.work_s_per_gb),
-            intermediate_ratio=Range(*self.intermediate_ratio),
-            final_output_gb=Range(*self.final_output_gb),
-            deadline_after_release_s={
+        if deadlines is not None:
+            given["deadline_after_release_s"] = {
                 Priority.URGENT: deadlines.urgent,
                 Priority.NON_URGENT: deadlines.non_urgent,
-            },
-        )
+            }
+        return WorkloadModel(**given)

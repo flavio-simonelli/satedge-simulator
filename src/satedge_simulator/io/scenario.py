@@ -14,6 +14,7 @@ from satedge_simulator.io.contact_plan import load_contact_plan
 from satedge_simulator.io.topology import load_topology
 from satedge_simulator.io.workload import load_workload
 from satedge_simulator.io.workload_model import WorkloadModelDoc
+from satedge_simulator.rng.rngs import DEFAULT_SEED
 
 
 class PlannerDoc(Document):
@@ -29,7 +30,7 @@ class SimulationDoc(Document):
     end_s: float
     tolerance_s: float = 1e-4
     strict: bool = False
-    seed: int = 123_456_789
+    seed: int = DEFAULT_SEED
 
 
 class ScenarioDoc(Document):

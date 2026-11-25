@@ -27,12 +27,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from satedge_simulator.domain.topology import NodeId
-from satedge_simulator.domain.workload import Priority
+from satedge_simulator.domain.topology import ORBITAL_PERIOD_S, NodeId
+from satedge_simulator.domain.workload import DEFAULT_DEADLINE_AFTER_RELEASE_S, Priority
 from satedge_simulator.errors import ScenarioError
-
-ORBITAL_PERIOD_S = 5640.0
-"""94 minutes: the default revisit time, and the period of the computing windows."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,7 +81,7 @@ class WorkloadModel:
     intermediate_ratio: Range = field(default_factory=lambda: Range(0.8, 1.2))
     final_output_gb: Range = field(default_factory=lambda: Range(0.0001, 0.001))
     deadline_after_release_s: Mapping[Priority, float] = field(
-        default_factory=lambda: {Priority.URGENT: 7200.0, Priority.NON_URGENT: 25200.0}
+        default_factory=lambda: dict(DEFAULT_DEADLINE_AFTER_RELEASE_S)
     )
 
     def __post_init__(self) -> None:
