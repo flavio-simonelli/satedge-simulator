@@ -70,3 +70,32 @@ def test_total_duration_before_an_instant() -> None:
 def test_window_set_equality() -> None:
     assert WindowSet([Window(0.0, 1.0)]) == WindowSet([Window(0.0, 1.0)])
     assert WindowSet() != WindowSet([Window(0.0, 1.0)])
+
+
+def test_periodic_windows_open_every_period_before_the_horizon() -> None:
+    windows = WindowSet.periodic(
+        first_start=5.0, period=100.0, duration=20.0, horizon=250.0
+    )
+    assert [(w.start, w.end) for w in windows] == [
+        (5.0, 25.0),
+        (105.0, 125.0),
+        (205.0, 225.0),
+    ]
+
+
+def test_a_window_opening_at_the_horizon_is_left_out() -> None:
+    windows = WindowSet.periodic(
+        first_start=0.0, period=100.0, duration=10.0, horizon=200.0
+    )
+    assert [w.start for w in windows] == [0.0, 100.0]
+
+
+@pytest.mark.parametrize(
+    ("first", "period", "duration"),
+    [(-1.0, 100.0, 10.0), (0.0, 100.0, 100.0), (0.0, 100.0, 0.0)],
+)
+def test_periodic_windows_need_a_valid_first_start_and_a_duration_below_the_period(
+    first: float, period: float, duration: float
+) -> None:
+    with pytest.raises(ScenarioError):
+        WindowSet.periodic(first, period, duration, horizon=1000.0)

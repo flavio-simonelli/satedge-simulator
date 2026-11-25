@@ -11,8 +11,9 @@ import math
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 
-from satedge_simulator.domain.intervals import Window, WindowSet
+from satedge_simulator.domain.intervals import WindowSet
 from satedge_simulator.domain.topology import (
+    ORBITAL_PERIOD_S,
     AlwaysAvailable,
     Constellation,
     GroundStation,
@@ -36,7 +37,7 @@ class HpcSchedule:
         startup_s: Part of each window spent starting the containers.
     """
 
-    period_s: float = 5640.0
+    period_s: float = ORBITAL_PERIOD_S
     duration_s: float = 300.0
     startup_s: float = 0.0
 
@@ -129,13 +130,8 @@ def ring_pairs(size: int) -> list[tuple[int, int]]:
 
 
 def periodic_windows(phase_s: float, hpc: HpcSchedule, horizon_s: float) -> WindowSet:
-    """Windows that start at ``phase_s`` and repeat every period, while they start before the horizon."""
-    windows: list[Window] = []
-    start = phase_s
-    while start < horizon_s:
-        windows.append(Window(start, start + hpc.usable_s))
-        start += hpc.period_s
-    return WindowSet(windows)
+    """The computing windows of an HPC: from ``phase_s``, one per period, net of the start-up."""
+    return WindowSet.periodic(phase_s, hpc.period_s, hpc.usable_s, horizon_s)
 
 
 class RingConstellationBuilder:
@@ -227,3 +223,7 @@ class RingConstellationBuilder:
             params.latency_s,
             WindowedAvailability(self._contact_plan.windows_of(a, b)),
         )
+
+
+DEFAULT_HPC = HpcSchedule()
+"""The computing windows of the case study: 5 minutes every orbital period, no start-up."""

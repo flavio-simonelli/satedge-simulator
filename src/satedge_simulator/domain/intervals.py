@@ -92,6 +92,37 @@ class WindowSet:
     def __repr__(self) -> str:
         return f"WindowSet({list(self._windows)!r})"
 
+    @classmethod
+    def periodic(
+        cls, first_start: float, period: float, duration: float, horizon: float
+    ) -> WindowSet:
+        """The windows ``[first + k·period, first + k·period + duration]`` that start before
+        ``horizon``: the computing windows of an HPC, the contacts of a periodic link.
+
+        Raises:
+            ScenarioError: If the first start is negative or not finite, the horizon is not
+                finite, or the duration is not shorter than the period: two windows would
+                overlap or touch.
+        """
+        if not (math.isfinite(first_start) and first_start >= 0):
+            raise ScenarioError(
+                f"la prima apertura deve essere finita e >= 0, invece è {first_start}"
+            )
+        if not math.isfinite(horizon):
+            raise ScenarioError(
+                "l'orizzonte delle finestre periodiche deve essere finito"
+            )
+        if not 0 < duration < period:
+            raise ScenarioError(
+                f"finestre periodiche: serve 0 < durata < periodo, invece durata = {duration}, "
+                f"periodo = {period}"
+            )
+        count = max(0, math.ceil((horizon - first_start) / period))
+        return cls(
+            Window(first_start + k * period, first_start + k * period + duration)
+            for k in range(count)
+        )
+
     def containing(self, instant: float, eps: float = 0.0) -> Window | None:
         """The window that contains ``instant`` up to ``eps``, if any."""
         k = bisect.bisect_right(self._starts, instant + eps) - 1
