@@ -67,6 +67,7 @@ class GroundRuntime:
         self._runtimes: dict[str, RequestRuntime] = {}
         self._arrived: list[RequestSpec] = []
         self._lost_raw: list[str] = []
+        self._decisions: list[tuple[Epoch, PlanningDecision]] = []
         for spec in self._specs.values():
             env.process(self._arrive(spec))
             env.process(self._acquire_raw(spec))
@@ -81,6 +82,11 @@ class GroundRuntime:
     def runtimes(self) -> Mapping[str, RequestRuntime]:
         """The runtime of each accepted request, by identifier."""
         return MappingProxyType(self._runtimes)
+
+    @property
+    def decisions(self) -> tuple[tuple[Epoch, PlanningDecision], ...]:
+        """The decision of each epoch in which the planner decided, in order."""
+        return tuple(self._decisions)
 
     @property
     def lost_raw(self) -> tuple[str, ...]:
@@ -124,6 +130,7 @@ class GroundRuntime:
     def _apply(self, decision: PlanningDecision, epoch: Epoch) -> None:
         """Record the decision of ``epoch`` and install its plan."""
         now = self._env.now
+        self._decisions.append((epoch, decision))
         for request_id, reason in decision.rejected.items():
             self._records[request_id].move(RequestStatus.REJECTED, now)
             self._bus.publish(RequestRejected(now, request_id, epoch.index, reason))

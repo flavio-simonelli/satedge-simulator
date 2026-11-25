@@ -4,6 +4,7 @@ import pytest
 from one_satellite import LEAD_TIME_S, ScriptedPlanner, actions, constellation, request
 
 from satedge_simulator.domain.lifecycle import RequestStatus
+from satedge_simulator.domain.plan import PlannedTask
 from satedge_simulator.domain.scenario import Scenario, SimulationSettings
 from satedge_simulator.domain.violations import ViolationKind
 from satedge_simulator.domain.workload import RequestSpec
@@ -93,3 +94,35 @@ def test_a_simulation_runs_once() -> None:
     sim.run()
     with pytest.raises(StateError, match="already ran"):
         sim.run()
+
+
+def test_the_metrics_of_a_delivered_request_match_a_count_by_hand() -> None:
+    # Raw data at 20 s, task 120-133 s on A, downlink 150-151 s, delivery at 151.015 s.
+    planner = ScriptedPlanner({"R1": actions(120.0, 150.0)})
+    outcome = Simulation(scenario(request()), planner).run()
+    metrics = outcome.metrics
+    urgent = metrics.requests[0]
+    assert (urgent.arrived, urgent.accepted, urgent.delivered_on_time) == (1, 1, 1)
+    assert urgent.response_from_release.max == pytest.approx(151.015 - 20.0)
+    assert urgent.response_from_arrival.max == pytest.approx(151.015 - 10.0)
+    assert urgent.tardiness.max == 0.0
+    assert metrics.hpcs["A"].busy_s == pytest.approx(13.0)
+    assert metrics.hpcs["A"].available_s == 2000.0
+    assert metrics.arcs[("A", "GS")].busy_s == pytest.approx(1.0)
+    assert metrics.arcs[("A", "GS")].available_s == 400.0  # [100, 300] and [1000, 1200]
+    assert metrics.plmms["A"].peak_gb == 5.0
+    # 4 Gb from 20 s to 132 s, 5 Gb to 133 s, 1 Gb to 151 s
+    assert metrics.plmms["A"].mean_gb == pytest.approx(
+        (4 * 112 + 5 * 1 + 1 * 18) / 2000
+    )
+    assert (metrics.epochs.epochs, metrics.epochs.accepted) == (1, 1)
+    assert metrics.violations == {}
+    assert metrics.deviation.max == 0.0  # deterministic: the plan is executed as it is
+    assert outcome.as_run.tasks == (PlannedTask("R1", 0, "A", 120.0, 133.0),)
+
+
+def test_the_violations_are_counted_by_kind() -> None:
+    planner = ScriptedPlanner({"R1": actions(90.0, 150.0)})
+    metrics = Simulation(scenario(request()), planner).run().metrics
+    assert metrics.violations == {ViolationKind.PLAN_NOT_ARRIVED: 1}
+    assert metrics.requests[0].failed == 1
