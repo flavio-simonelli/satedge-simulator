@@ -9,6 +9,7 @@ import simpy
 from satedge_simulator.domain.plan import PlannedTask
 from satedge_simulator.domain.violations import Violation, ViolationKind
 from satedge_simulator.domain.workload import TaskSpec
+from satedge_simulator.observe.notifications import TaskEnded, TaskStarted
 from satedge_simulator.runtime.ledger import DataKey, DataLedger
 from satedge_simulator.runtime.satellite import SatelliteRuntime
 from satedge_simulator.runtime.timing import guarded_request, guarded_wait
@@ -48,14 +49,22 @@ def run_task(
     if not (yield from guarded_request(env, request, tolerance_s)):
         report(_violation(env, task, ViolationKind.HPC_BUSY))
         return False
+    node.bus.publish(
+        TaskStarted(env.now, task.request_id, task.task_index, node.node_id)
+    )
+    completed = False
     try:
-        return (
-            yield from _execute(
-                env, task, node, ledger, report, tolerance_s, spec, input_size_gb
-            )
+        completed = yield from _execute(
+            env, task, node, ledger, report, tolerance_s, spec, input_size_gb
         )
+        return completed
     finally:
         node.hpc.release(request)
+        node.bus.publish(
+            TaskEnded(
+                env.now, task.request_id, task.task_index, node.node_id, completed
+            )
+        )
 
 
 def _execute(

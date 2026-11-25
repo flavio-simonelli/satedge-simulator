@@ -6,6 +6,7 @@ import simpy
 
 from satedge_simulator.domain.topology import Link, NodeId, WindowedAvailability
 from satedge_simulator.errors import StateError
+from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.runtime.windows import WindowClosings
 
 
@@ -15,6 +16,7 @@ class LinkRuntime:
     The channel is a resource of capacity one: a transmission holds it from its start to the end
     of the transmission on the sender. The two directions of a link are independent, so each has
     its own ``LinkRuntime``. Capacity, latency and windows are the static ones of the domain.
+    The transmissions on it publish on ``bus``.
     """
 
     def __init__(
@@ -24,6 +26,7 @@ class LinkRuntime:
         source: NodeId,
         target: NodeId,
         tolerance_s: float,
+        bus: EventBus | None = None,
     ) -> None:
         if not link.connects(source, target):
             raise StateError(f"link {link.name} does not join {source} and {target}")
@@ -31,6 +34,7 @@ class LinkRuntime:
         self.link = link
         self.source = source
         self.target = target
+        self.bus = bus or EventBus()
         self.channel = simpy.Resource(env, capacity=1)
         availability = link.availability
         self._closings = (

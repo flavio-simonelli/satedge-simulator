@@ -5,6 +5,7 @@ from __future__ import annotations
 import simpy
 
 from satedge_simulator.domain.topology import Satellite
+from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.runtime.plmm import Plmm
 from satedge_simulator.runtime.windows import WindowClosings
 
@@ -14,16 +15,21 @@ class SatelliteRuntime:
 
     The HPC is a resource of capacity one: a task holds it from its start to its end. The PLMM is
     the memory container of the satellite. The description (windows, capacities, rate) is the
-    static one of the domain.
+    static one of the domain. The actions on the satellite publish on ``bus``.
     """
 
     def __init__(
-        self, env: simpy.Environment, satellite: Satellite, tolerance_s: float
+        self,
+        env: simpy.Environment,
+        satellite: Satellite,
+        tolerance_s: float,
+        bus: EventBus | None = None,
     ) -> None:
         self.env = env
         self.satellite = satellite
+        self.bus = bus or EventBus()
         self.hpc = simpy.Resource(env, capacity=1)
-        self.plmm = Plmm(env, satellite.plmm_capacity_gb)
+        self.plmm = Plmm(env, satellite.plmm_capacity_gb, satellite.id, self.bus)
         self._closings = WindowClosings(env, satellite.hpc_windows, tolerance_s)
 
     @property

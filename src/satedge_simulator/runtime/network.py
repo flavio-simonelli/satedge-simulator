@@ -6,6 +6,7 @@ import simpy
 
 from satedge_simulator.domain.topology import Constellation, NodeId
 from satedge_simulator.errors import StateError
+from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.runtime.links import LinkRuntime
 from satedge_simulator.runtime.satellite import SatelliteRuntime
 
@@ -14,18 +15,22 @@ class NetworkRuntime:
     """The constellation during the simulation: one runtime per satellite and per arc."""
 
     def __init__(
-        self, env: simpy.Environment, constellation: Constellation, tolerance_s: float
+        self,
+        env: simpy.Environment,
+        constellation: Constellation,
+        tolerance_s: float,
+        bus: EventBus | None = None,
     ) -> None:
         self.constellation = constellation
         self._satellites = {
-            s.id: SatelliteRuntime(env, s, tolerance_s)
+            s.id: SatelliteRuntime(env, s, tolerance_s, bus)
             for s in constellation.satellites
         }
         self._links: dict[tuple[NodeId, NodeId], LinkRuntime] = {}
         for link in constellation.links:
             for source, target in ((link.a, link.b), (link.b, link.a)):
                 self._links[(source, target)] = LinkRuntime(
-                    env, link, source, target, tolerance_s
+                    env, link, source, target, tolerance_s, bus
                 )
 
     @property

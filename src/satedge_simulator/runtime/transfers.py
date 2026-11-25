@@ -10,6 +10,11 @@ from simpy.resources.resource import Request
 from satedge_simulator.domain.plan import PlannedTransfer
 from satedge_simulator.domain.topology import NodeId
 from satedge_simulator.domain.violations import Violation, ViolationKind
+from satedge_simulator.observe.notifications import (
+    TransferEnded,
+    TransferReceived,
+    TransferStarted,
+)
 from satedge_simulator.runtime.ledger import DataKey, DataLedger
 from satedge_simulator.runtime.links import LinkRuntime
 from satedge_simulator.runtime.satellite import SatelliteRuntime
@@ -61,12 +66,22 @@ def run_transfer(
     if not (yield from guarded_request(env, request, tolerance_s)):
         report(_violation(env, transfer, ViolationKind.LINK_BUSY, transfer.source))
         return False
+    link.bus.publish(
+        TransferStarted(
+            env.now,
+            transfer.request_id,
+            transfer.data_index,
+            transfer.source,
+            transfer.target,
+        )
+    )
     closing = link.window_closing()
     if closing is None:
         link.channel.release(request)
+        link.bus.publish(_ended(env, transfer, completed=False))
         report(_violation(env, transfer, ViolationKind.LINK_WINDOW, transfer.source))
         return False
-    sending = env.process(_send(env, link, request, sender, sent, size_gb))
+    sending = env.process(_send(env, transfer, link, request, sender, sent, size_gb))
     reception = env.process(
         _receive(env, transfer, link, receiver, ledger, report, tolerance_s, size_gb)
     )
@@ -88,6 +103,7 @@ def run_transfer(
 
 def _send(
     env: simpy.Environment,
+    transfer: PlannedTransfer,
     link: LinkRuntime,
     request: Request,
     sender: SatelliteRuntime,
@@ -98,12 +114,15 @@ def _send(
 
     If the window closes first, the channel is freed and the sender keeps its copy.
     """
+    completed = False
     try:
         yield env.timeout(link.link.transmission_time(size_gb))
+        completed = True
     except simpy.Interrupt:
         return
     finally:
         link.channel.release(request)
+        link.bus.publish(_ended(env, transfer, completed))
     sender.plmm.release(sent)
 
 
@@ -139,7 +158,29 @@ def _receive(
             receiver.plmm.release(received)
         return False
     ledger.mark_complete(received)
+    link.bus.publish(
+        TransferReceived(
+            env.now,
+            transfer.request_id,
+            transfer.data_index,
+            transfer.source,
+            transfer.target,
+        )
+    )
     return True
+
+
+def _ended(
+    env: simpy.Environment, transfer: PlannedTransfer, completed: bool
+) -> TransferEnded:
+    return TransferEnded(
+        env.now,
+        transfer.request_id,
+        transfer.data_index,
+        transfer.source,
+        transfer.target,
+        completed,
+    )
 
 
 def _violation(

@@ -7,7 +7,10 @@ from collections.abc import Generator
 import simpy
 from simpy.resources.container import ContainerPut
 
+from satedge_simulator.domain.topology import NodeId
 from satedge_simulator.errors import StateError
+from satedge_simulator.observe.bus import EventBus
+from satedge_simulator.observe.notifications import PlmmChanged
 from satedge_simulator.runtime.ledger import DataKey
 from satedge_simulator.runtime.timing import guarded_wait
 
@@ -16,12 +19,22 @@ class Plmm:
     """The memory of a satellite, as a container, plus the size each data item occupies.
 
     The container tells how much memory is free; the occupations tell which item uses it, so that
-    the memory of a failed request can be freed and the occupation can be measured.
+    the memory of a failed request can be freed and the occupation can be measured. Every
+    change of the occupied memory is published on ``bus``.
     """
 
-    def __init__(self, env: simpy.Environment, capacity_gb: float) -> None:
+    def __init__(
+        self,
+        env: simpy.Environment,
+        capacity_gb: float,
+        satellite: NodeId = "",
+        bus: EventBus | None = None,
+    ) -> None:
+        self._env = env
         self._container = simpy.Container(env, capacity=capacity_gb)
         self._occupied: dict[DataKey, float] = {}
+        self._satellite = satellite
+        self._bus = bus or EventBus()
 
     @property
     def level_gb(self) -> float:
@@ -57,13 +70,13 @@ class Plmm:
         if not granted:
             put.cancel()
             return False
-        self._occupied[key] = size_gb
+        self._store(key, size_gb)
         return True
 
     def _abandon(self, key: DataKey, put: ContainerPut, size_gb: float) -> None:
         """Undo a reservation whose waiter was interrupted."""
         if put.triggered:
-            self._occupied[key] = size_gb
+            self._store(key, size_gb)
         else:
             put.cancel()
 
@@ -71,7 +84,15 @@ class Plmm:
         """Free the memory of ``key``. Releasing an item that is not stored is a no-op."""
         size_gb = self._occupied.pop(key, None)
         if size_gb is not None:
-            self._container.get(size_gb)
+            self._container.get(size_gb)  # the level drops at once
+            self._publish(self._container.level)
+
+    def _store(self, key: DataKey, size_gb: float) -> None:
+        self._occupied[key] = size_gb
+        self._publish(self._container.level)
+
+    def _publish(self, level_gb: float) -> None:
+        self._bus.publish(PlmmChanged(self._env.now, self._satellite, level_gb))
 
     def release_request(self, request_id: str) -> None:
         """Free the memory of every item of ``request_id``, as when the request fails."""

@@ -12,6 +12,12 @@ from satedge_simulator.domain.topology import NodeId
 from satedge_simulator.domain.violations import Violation
 from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.errors import StateError
+from satedge_simulator.observe.bus import EventBus
+from satedge_simulator.observe.notifications import (
+    RequestDelivered,
+    RequestFailed,
+    ViolationRaised,
+)
 from satedge_simulator.runtime.ledger import DataKey, DataLedger
 from satedge_simulator.runtime.satellite import SatelliteRuntime
 
@@ -52,6 +58,7 @@ class RequestRuntime:
         ground: NodeId,
         listener: OutcomeListener,
         on_violation: Callable[[Violation], None] = lambda _: None,
+        bus: EventBus | None = None,
     ) -> None:
         if record.status is not RequestStatus.ACCEPTED:
             raise StateError(
@@ -63,6 +70,7 @@ class RequestRuntime:
         self._satellites = tuple(satellites)
         self._listener = listener
         self._on_violation = on_violation
+        self._bus = bus or EventBus()
         self._actions: list[simpy.Process] = []
         self._violations: list[Violation] = []
         final_output = DataKey(request.id, len(request.tasks), ground)
@@ -101,6 +109,11 @@ class RequestRuntime:
         exception stops the simulation.
         """
         self._violations.append(violation)
+        self._bus.publish(
+            ViolationRaised(
+                violation.at_s, violation.request_id, violation.kind, violation.node
+            )
+        )
         self._on_violation(violation)
         self.fail()
 
@@ -114,6 +127,7 @@ class RequestRuntime:
         if self.is_over:
             return
         self._record.move(RequestStatus.FAILED, self._env.now)
+        self._bus.publish(RequestFailed(self._env.now, self._request.id))
         running = self._env.active_process
         for action in self._actions:
             if action.is_alive and action is not running:
@@ -149,4 +163,5 @@ class RequestRuntime:
             RequestStatus.DELIVERED_ON_TIME if on_time else RequestStatus.DELIVERED_LATE
         )
         self._record.move(status, self._env.now)
+        self._bus.publish(RequestDelivered(self._env.now, self._request.id, on_time))
         self._listener.on_delivered(self._request.id)

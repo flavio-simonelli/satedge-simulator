@@ -9,6 +9,8 @@ import simpy
 from satedge_simulator.domain.plan import EpochPlan, PlannedTask, PlannedTransfer
 from satedge_simulator.domain.topology import NodeId
 from satedge_simulator.domain.violations import Violation, ViolationKind
+from satedge_simulator.observe.bus import EventBus
+from satedge_simulator.observe.notifications import PlanInstalled
 from satedge_simulator.runtime.ledger import DataLedger
 from satedge_simulator.runtime.network import NetworkRuntime
 from satedge_simulator.runtime.requests import Action, RequestRuntime
@@ -31,17 +33,20 @@ class PlanInstaller:
         network: NetworkRuntime,
         ledger: DataLedger,
         tolerance_s: float,
+        bus: EventBus | None = None,
     ) -> None:
         self._env = env
         self._network = network
         self._ledger = ledger
         self._tolerance_s = tolerance_s
+        self._bus = bus or EventBus()
 
     def install(
         self,
         plan: EpochPlan,
         arrival_s: Mapping[NodeId, float],
         requests: Mapping[str, RequestRuntime],
+        epoch: int = 0,
     ) -> None:
         """Start the actions of ``plan`` as the plan reaches their satellites.
 
@@ -49,7 +54,16 @@ class PlanInstaller:
             plan: The plan of the epoch, for the requests just accepted.
             arrival_s: Instant the plan reaches each satellite, ``inf`` if never.
             requests: The runtime of each request just accepted.
+            epoch: Index of the epoch, for the notification of the installation.
         """
+        involved = {t.satellite for t in plan.tasks} | {
+            t.source for t in plan.transfers
+        }
+        for satellite in sorted(involved):
+            if arrival_s[satellite] != float("inf"):
+                self._env.process(
+                    self._announce(epoch, satellite, arrival_s[satellite])
+                )
         for task in plan.tasks:
             request = requests[task.request_id]
             self._when_known(
@@ -88,6 +102,12 @@ class PlanInstaller:
     ) -> Generator[simpy.Event, object]:
         yield self._env.timeout(max(0.0, at_s - self._env.now))
         request.run(action())
+
+    def _announce(
+        self, epoch: int, satellite: NodeId, at_s: float
+    ) -> Generator[simpy.Event, object]:
+        yield self._env.timeout(max(0.0, at_s - self._env.now))
+        self._bus.publish(PlanInstalled(self._env.now, epoch, satellite))
 
     def _not_arrived(
         self, request: RequestRuntime, node: NodeId, start_s: float

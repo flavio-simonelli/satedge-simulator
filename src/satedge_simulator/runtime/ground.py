@@ -11,6 +11,13 @@ from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
 from satedge_simulator.domain.plan import EpochPlan
 from satedge_simulator.domain.violations import Violation
 from satedge_simulator.domain.workload import RequestSpec
+from satedge_simulator.observe.bus import EventBus
+from satedge_simulator.observe.notifications import (
+    EpochPlanned,
+    RequestAccepted,
+    RequestArrived,
+    RequestRejected,
+)
 from satedge_simulator.planning.epochs import Epoch
 from satedge_simulator.planning.ports import PlanningDecision
 from satedge_simulator.planning.propagation import plan_arrival_times
@@ -45,6 +52,7 @@ class GroundRuntime:
         installer: PlanInstaller,
         tolerance_s: float,
         on_violation: Callable[[Violation], None] = lambda _: None,
+        bus: EventBus | None = None,
     ) -> None:
         self._env = env
         self._rolling = rolling
@@ -53,6 +61,7 @@ class GroundRuntime:
         self._installer = installer
         self._tolerance_s = tolerance_s
         self._on_violation = on_violation
+        self._bus = bus or EventBus()
         self._specs = {r.id: r for r in requests}
         self._records: dict[str, RequestRecord] = {}
         self._runtimes: dict[str, RequestRuntime] = {}
@@ -86,6 +95,7 @@ class GroundRuntime:
         record.move(RequestStatus.QUEUED, self._env.now)
         self._records[spec.id] = record
         self._arrived.append(spec)
+        self._bus.publish(RequestArrived(self._env.now, spec.id))
 
     def _acquire_raw(self, spec: RequestSpec) -> Generator[simpy.Event, object]:
         yield self._env.timeout(spec.release_s)
@@ -104,9 +114,8 @@ class GroundRuntime:
     def _plan(self, epochs: tuple[Epoch, ...]) -> Generator[simpy.Event, object]:
         for epoch in epochs:
             yield self._env.timeout(max(0.0, epoch.start_s - self._env.now))
-            yield self._env.timeout(
-                0
-            )  # the arrivals of this instant enter the snapshot
+            # the arrivals of this instant enter the snapshot
+            yield self._env.timeout(0)
             arrived, self._arrived = self._arrived, []
             decision = self._rolling.plan_epoch(epoch, arrived)
             if decision is not None:
@@ -115,8 +124,9 @@ class GroundRuntime:
     def _apply(self, decision: PlanningDecision, epoch: Epoch) -> None:
         """Record the decision of ``epoch`` and install its plan."""
         now = self._env.now
-        for request_id in decision.rejected:
+        for request_id, reason in decision.rejected.items():
             self._records[request_id].move(RequestStatus.REJECTED, now)
+            self._bus.publish(RequestRejected(now, request_id, epoch.index, reason))
             spec = self._specs[request_id]
             self._network.satellite(spec.origin).plmm.release(
                 DataKey(spec.id, 0, spec.origin)
@@ -125,6 +135,7 @@ class GroundRuntime:
         for request_id in _accepted_ids(decision.plan):
             record = self._records[request_id]
             record.move(RequestStatus.ACCEPTED, now)
+            self._bus.publish(RequestAccepted(now, request_id, epoch.index))
             accepted[request_id] = RequestRuntime(
                 self._env,
                 self._specs[request_id],
@@ -134,10 +145,23 @@ class GroundRuntime:
                 self._network.constellation.ground_station.id,
                 self._rolling,
                 self._on_violation,
+                self._bus,
             )
         self._runtimes.update(accepted)
         arrival_s = plan_arrival_times(self._network.constellation, epoch.ready_s)
-        self._installer.install(decision.plan, arrival_s, accepted)
+        self._bus.publish(
+            EpochPlanned(
+                now,
+                epoch=epoch.index,
+                ready_s=epoch.ready_s,
+                new=len(accepted) + len(decision.rejected) + len(self._rolling.pending),
+                accepted=len(accepted),
+                rejected=len(decision.rejected),
+                solver_time_s=decision.solver_time_s,
+                unreachable=sum(1 for t in arrival_s.values() if t == float("inf")),
+            )
+        )
+        self._installer.install(decision.plan, arrival_s, accepted, epoch.index)
 
 
 def _accepted_ids(plan: EpochPlan) -> list[str]:
