@@ -37,6 +37,12 @@ dev = [
     "ruff>=0.17.5",
     "types-pyyaml>=6.0.12.20261122",
 ]
+docs = [
+    "furo>=2025.12.19",
+    "myst-parser>=5.1",
+    "sphinx>=9.1",
+    "sphinxcontrib-mermaid>=2.1.1",
+]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
