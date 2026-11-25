@@ -1,0 +1,9 @@
+# Finestre di visibilità del caso studio descritte come le descrive l'azienda: COM-COM una volta
+# per periodo orbitale per circa 10 min, COM-Terra ogni metà periodo per circa 3 min. Le finestre
+# si generano fino alla fine della simulazione, qualunque sia la sua durata.
+schema_version: "1.0.0"
+kind: periodic
+links:
+  - {a: COM1, b: COM2, first_start_s: 1500, period_s: 5640, duration_s: 600}
+  - {a: COM1, b: GS, first_start_s: 2400, period_s: 2820, duration_s: 180}
+  - {a: COM2, b: GS, first_start_s: 3900, period_s: 2820, duration_s: 180}

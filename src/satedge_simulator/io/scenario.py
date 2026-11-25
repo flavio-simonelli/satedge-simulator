@@ -74,7 +74,9 @@ def load_scenario(path: str | Path) -> LoadedScenario:
     """
     document = read_document(path, ScenarioDoc)
     base = Path(path).parent
-    contact_plan = load_contact_plan(base / document.contact_plan)
+    contact_plan = load_contact_plan(
+        base / document.contact_plan, horizon_s=document.simulation.end_s
+    )
     constellation = load_topology(base / document.topology, contact_plan)
     if document.workload is None and document.workload_model is None:
         raise DocumentError(
