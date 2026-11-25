@@ -58,7 +58,7 @@ class RollingPlanner:
         self._pending.extend(arrived)
         if not self._pending:
             return None
-        new_requests = tuple(self._released_at(r, epoch.start_s) for r in self._pending)
+        new_requests = tuple(released_at(r, epoch.start_s) for r in self._pending)
         snapshot = PlanningSnapshot(
             epoch=epoch,
             constellation=self._constellation,
@@ -80,11 +80,6 @@ class RollingPlanner:
     def on_failed(self, request_id: str) -> None:
         """The execution of the request failed: it is no longer committed."""
         self._release_commitment(request_id)
-
-    @staticmethod
-    def _released_at(request: RequestSpec, epoch_start_s: float) -> RequestSpec:
-        """The request as the epoch sees it: its raw data cannot be in memory before the epoch."""
-        return replace(request, release_s=max(request.release_s, epoch_start_s))
 
     def _record(
         self, decision: PlanningDecision, new_requests: tuple[RequestSpec, ...]
@@ -115,3 +110,8 @@ class RollingPlanner:
         if request_id not in self._commitments:
             raise StateError(f"request {request_id} is not committed")
         del self._commitments[request_id]
+
+
+def released_at(request: RequestSpec, epoch_start_s: float) -> RequestSpec:
+    """The request as an epoch sees it: none of its actions can start before the epoch."""
+    return replace(request, release_s=max(request.release_s, epoch_start_s))

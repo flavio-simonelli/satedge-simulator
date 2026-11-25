@@ -127,12 +127,13 @@ def _request(request: RequestSpec) -> Request:
 
 def _committed(commitments: tuple[Commitment, ...]) -> Schedule:
     return Schedule(
-        executions=tuple(_execution(t) for c in commitments for t in c.tasks),
-        transfers=tuple(_transfer(t) for c in commitments for t in c.transfers),
+        executions=tuple(execution_of(t) for c in commitments for t in c.tasks),
+        transfers=tuple(transfer_of(t) for c in commitments for t in c.transfers),
     )
 
 
-def _execution(task: PlannedTask) -> TaskExecution:
+def execution_of(task: PlannedTask) -> TaskExecution:
+    """The execution of the scheduler for a task of the simulator."""
     return TaskExecution(
         request_id=task.request_id,
         task_index=task.task_index,
@@ -142,7 +143,8 @@ def _execution(task: PlannedTask) -> TaskExecution:
     )
 
 
-def _transfer(transfer: PlannedTransfer) -> Transfer:
+def transfer_of(transfer: PlannedTransfer) -> Transfer:
+    """The transfer of the scheduler for a transfer of the simulator."""
     return Transfer(
         request_id=transfer.request_id,
         data_index=transfer.data_index,
