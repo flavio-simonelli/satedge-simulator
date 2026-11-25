@@ -188,7 +188,9 @@ def test_the_first_violation_fails_the_request_and_stops_its_other_actions() -> 
     h.send(DOWNLINK, h.downlink, None)
     h.env.run()
     assert h.record.status is RequestStatus.FAILED
-    assert h.record.history[-1] == (pytest.approx(10.0 + EPS), RequestStatus.FAILED)
+    instant, status = h.record.history[-1]
+    assert instant == pytest.approx(10.0 + EPS)
+    assert status is RequestStatus.FAILED
     assert [v.kind for v in h.runtime.violations] == [ViolationKind.DATA_NOT_READY]
     assert h.listener.failed == ["R1"]
     assert h.listener.delivered == []
