@@ -78,7 +78,7 @@ class RequestRecord:
         """
         if target not in _TRANSITIONS.get(self.status, frozenset()):
             raise StateError(
-                f"request {self.request_id}: cannot go from {self.status} to {target}"
+                f"richiesta {self.request_id}: non può passare da {self.status} a {target}"
             )
         self.status = target
         self.history.append((at_s, target))

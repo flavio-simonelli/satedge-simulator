@@ -62,7 +62,7 @@ class RequestRuntime:
     ) -> None:
         if record.status is not RequestStatus.ACCEPTED:
             raise StateError(
-                f"request {request.id}: runtime needs an accepted request, got {record.status}"
+                f"richiesta {request.id}: il runtime richiede una richiesta accettata, invece è {record.status}"
             )
         self._env = env
         self._request = request

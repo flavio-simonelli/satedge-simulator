@@ -40,7 +40,7 @@ def plan_arrival_times(
     """
     if not (math.isfinite(ready_at_s) and ready_at_s >= 0):
         raise ScenarioError(
-            f"plan ready instant must be finite and >= 0, got {ready_at_s}"
+            f"l'istante in cui il piano è pronto deve essere finito e >= 0, invece è {ready_at_s}"
         )
     ground = constellation.ground_station.id
     incident = _incident_links(constellation)

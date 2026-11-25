@@ -50,7 +50,7 @@ class DataLedger:
         """
         event = self.complete_event(key)
         if event.triggered:
-            raise StateError(f"data {key} completed twice")
+            raise StateError(f"il dato {key} è stato completato due volte")
         event.succeed()
 
     def is_complete(self, key: DataKey) -> bool:

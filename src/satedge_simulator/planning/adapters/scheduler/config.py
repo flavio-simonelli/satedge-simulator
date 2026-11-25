@@ -39,7 +39,7 @@ def load_planner(solver_path: str | Path, horizon_s: float) -> ConfiguredPlanner
     try:
         config = load_solver_config(solver_path)
     except SchedulerError as error:
-        raise DocumentError(str(error)) from error
+        raise DocumentError(f"file del solver non valido: {error}") from error
     time_limit = config.solve.time_limit if isinstance(config, MilpConfig) else None
     return ConfiguredPlanner(
         planner=SchedulerPlanner(config, horizon_s),

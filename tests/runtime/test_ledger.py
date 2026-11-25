@@ -14,7 +14,7 @@ def test_a_data_item_is_complete_once() -> None:
     assert not ledger.is_complete(key)
     ledger.mark_complete(key)
     assert ledger.is_complete(key)
-    with pytest.raises(StateError, match="twice"):
+    with pytest.raises(StateError, match="due volte"):
         ledger.mark_complete(key)
 
 

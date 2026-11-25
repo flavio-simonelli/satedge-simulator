@@ -24,7 +24,7 @@ def test_a_rejected_request_cannot_be_accepted_later() -> None:
     record = RequestRecord("R1")
     record.move(RequestStatus.QUEUED, 1.0)
     record.move(RequestStatus.REJECTED, 2.0)
-    with pytest.raises(StateError, match="cannot go from rejected to accepted"):
+    with pytest.raises(StateError, match="non può passare da rejected a accepted"):
         record.move(RequestStatus.ACCEPTED, 3.0)
 
 

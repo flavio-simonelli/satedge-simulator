@@ -45,6 +45,8 @@ class SchedulerPlanner:
         try:
             result = solve(instance, self._config, backend=self._backend)
         except SchedulerError as error:
-            raise PlannerError(f"scheduler: {error}") from error
+            raise PlannerError(
+                f"lo scheduler non ha prodotto un piano: {error}"
+            ) from error
         solver_time = result.statistics.solver_time_s or 0.0
         return to_decision(result.solution, snapshot, solver_time)

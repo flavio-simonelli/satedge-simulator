@@ -60,7 +60,7 @@ class Plmm:
             StateError: If the item is already stored.
         """
         if key in self._occupied:
-            raise StateError(f"data {key} already stored in the PLMM")
+            raise StateError(f"il dato {key} è già nella PLMM")
         put = self._container.put(size_gb)
         try:
             granted = yield from guarded_wait(env, put, tolerance_s)

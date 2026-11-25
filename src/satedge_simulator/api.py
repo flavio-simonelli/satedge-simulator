@@ -83,7 +83,7 @@ def simulate_file(
     )
     if lead is None:
         raise ScenarioError(
-            f"{path}: the scenario gives no lead time and the solver has no time limit"
+            f"{path}: lo scenario non indica l'anticipo del calcolo e il solver non ha un limite di tempo"
         )
     bus = EventBus()
     with ExitStack() as stack:

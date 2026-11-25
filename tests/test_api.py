@@ -67,7 +67,7 @@ def test_a_scenario_without_lead_time_needs_a_solver_with_a_time_limit(
     scenario.write_text(
         text.replace("lead_time_s: 60", "lead_time_s: null"), encoding="utf-8"
     )
-    with pytest.raises(ScenarioError, match="no lead time"):
+    with pytest.raises(ScenarioError, match="non indica l'anticipo"):
         simulate_file(scenario)
 
 

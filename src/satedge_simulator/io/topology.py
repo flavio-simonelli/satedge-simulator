@@ -123,7 +123,7 @@ def load_topology(path: str | Path, contact_plan: ContactPlan) -> Constellation:
         return _load_ring(path, contact_plan)
     supported = ", ".join(kind.value for kind in TopologyKind)
     raise DocumentError(
-        f"{path}: unsupported topology kind {header.kind!r}, supported: {supported}"
+        f"{path}: tipo di topologia non supportato {header.kind!r}, supportati: {supported}"
     )
 
 

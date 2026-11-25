@@ -27,11 +27,11 @@ class SimulationSettings:
     def __post_init__(self) -> None:
         if not (math.isfinite(self.end_s) and self.end_s > 0):
             raise ScenarioError(
-                f"simulation end must be finite and > 0, got {self.end_s}"
+                f"la fine della simulazione deve essere finita e > 0, invece è {self.end_s}"
             )
         if not (math.isfinite(self.tolerance_s) and self.tolerance_s >= 0):
             raise ScenarioError(
-                f"tolerance must be finite and >= 0, got {self.tolerance_s}"
+                f"la tolleranza deve essere finita e >= 0, invece è {self.tolerance_s}"
             )
 
 
@@ -56,11 +56,11 @@ class Scenario:
         for request in self.requests:
             if not self.constellation.is_satellite(request.origin):
                 raise ScenarioError(
-                    f"request {request.id}: origin {request.origin!r} is not a satellite"
+                    f"richiesta {request.id}: l'origine {request.origin!r} non è un satellite"
                 )
         if self.lead_time_s is not None and not (
             math.isfinite(self.lead_time_s) and self.lead_time_s > 0
         ):
             raise ScenarioError(
-                f"lead time must be finite and > 0, got {self.lead_time_s}"
+                f"l'anticipo del calcolo deve essere finito e > 0, invece è {self.lead_time_s}"
             )

@@ -26,11 +26,11 @@ class Window:
     def __post_init__(self) -> None:
         if not (math.isfinite(self.start) and math.isfinite(self.end)):
             raise ScenarioError(
-                f"window [{self.start}, {self.end}]: bounds must be finite"
+                f"window [{self.start}, {self.end}]: gli estremi devono essere finiti"
             )
         if self.start < 0 or self.end <= self.start:
             raise ScenarioError(
-                f"window [{self.start}, {self.end}]: needs 0 <= start < end"
+                f"window [{self.start}, {self.end}]: serve 0 <= inizio < fine"
             )
 
     @property
@@ -64,8 +64,8 @@ class WindowSet:
         for previous, current in itertools.pairwise(ordered):
             if current.start <= previous.end:
                 raise ScenarioError(
-                    f"windows [{previous.start}, {previous.end}] and "
-                    f"[{current.start}, {current.end}] overlap or touch"
+                    f"le finestre [{previous.start}, {previous.end}] e "
+                    f"[{current.start}, {current.end}] si sovrappongono o si toccano"
                 )
         self._windows = ordered
         self._starts = tuple(w.start for w in ordered)

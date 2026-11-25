@@ -35,7 +35,7 @@ def test_unknown_field_is_rejected_with_the_file_name(tmp_path: Path) -> None:
 
 def test_unsupported_schema_version_is_rejected(tmp_path: Path) -> None:
     path = write(tmp_path, VALID.replace('"1.0.0"', '"2.0.0"'))
-    with pytest.raises(DocumentError, match="schema version"):
+    with pytest.raises(DocumentError, match="versione dello schema"):
         load_contact_plan(path)
 
 
@@ -51,5 +51,5 @@ def test_missing_file_is_a_document_error(tmp_path: Path) -> None:
 
 
 def test_invalid_yaml_is_a_document_error(tmp_path: Path) -> None:
-    with pytest.raises(DocumentError, match="invalid YAML"):
+    with pytest.raises(DocumentError, match="YAML non valido"):
         load_contact_plan(write(tmp_path, "links: [unclosed"))

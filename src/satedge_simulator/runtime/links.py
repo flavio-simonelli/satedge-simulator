@@ -29,7 +29,7 @@ class LinkRuntime:
         bus: EventBus | None = None,
     ) -> None:
         if not link.connects(source, target):
-            raise StateError(f"link {link.name} does not join {source} and {target}")
+            raise StateError(f"il link {link.name} non collega {source} e {target}")
         self.env = env
         self.link = link
         self.source = source

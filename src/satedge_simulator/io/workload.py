@@ -73,7 +73,7 @@ def load_workload(path: str | Path) -> tuple[RequestSpec, ...]:
     requests = tuple(_request(doc) for doc in document.requests)
     ids = [r.id for r in requests]
     if len(set(ids)) != len(ids):
-        raise DocumentError(f"{path}: duplicate request identifiers")
+        raise DocumentError(f"{path}: identificativi di richiesta duplicati")
     return requests
 
 
@@ -94,4 +94,4 @@ def _request(doc: RequestDoc) -> RequestSpec:
             tasks=tuple(TaskSpec(t.execution_s, t.output_size_gb) for t in doc.tasks),
         )
     except ScenarioError as error:
-        raise DocumentError(f"request {doc.id}: {error}") from error
+        raise DocumentError(f"richiesta {doc.id}: {error}") from error

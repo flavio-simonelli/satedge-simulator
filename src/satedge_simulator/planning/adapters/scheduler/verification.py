@@ -20,7 +20,7 @@ from satedge_workflow_scheduler.domain.solution import (
     SolveStatus,
 )
 from satedge_workflow_scheduler.scheduling.deadline import DeadlineMode
-from satedge_workflow_scheduler.scheduling.feasibility import check
+from satedge_workflow_scheduler.scheduling.feasibility import Constraint, check
 
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
 from satedge_simulator.domain.topology import Constellation
@@ -49,7 +49,7 @@ class AsRunFinding:
 
     Attributes:
         epoch: The epoch whose delivered requests were checked.
-        constraint: The family of the constraint, with its numbers in the model.
+        constraint: The family of the constraint, with its numbers in the model, in Italian.
         request_id: The request concerned, if the finding concerns one.
         message: What is wrong, with the values involved.
     """
@@ -169,6 +169,38 @@ def _check_epoch(
         status=SolveStatus.FEASIBLE,
     )
     return [
-        AsRunFinding(epoch.index, str(v.constraint), v.request_id, v.message)
+        AsRunFinding(
+            epoch.index,
+            _CONSTRAINTS.get(v.constraint, str(v.constraint)),
+            v.request_id,
+            v.message,
+        )
         for v in check(instance, solution, mode, tolerance_s)
     ]
+
+
+_CONSTRAINTS = {
+    Constraint.OUTCOMES: "esiti: uno per richiesta, nessun rifiuto con scadenze soft",
+    Constraint.ASSIGNMENT: "(2) assegnazione: un'esecuzione per task, su un satellite",
+    Constraint.TASK_DURATION: "durata del task: il task dura L̄_{i,s}",
+    Constraint.PRECEDENCE: "(3) precedenza",
+    Constraint.RELEASE: "(4) rilascio del raw",
+    Constraint.COMPUTING_WINDOW: "(5)-(7) finestra di calcolo",
+    Constraint.HPC_OVERLAP: "(8)-(10) un task alla volta sull'HPC",
+    Constraint.PATH: "(11)-(13) percorso del dato",
+    Constraint.TRANSMISSION_TIME: "tempo di trasmissione: il trasferimento dura D_{a,e}",
+    Constraint.AFTER_PRODUCER: "(14a) trasmissione dopo il produttore",
+    Constraint.AFTER_RELEASE: "(14b) raw inviato dopo il rilascio",
+    Constraint.STORE_AND_FORWARD: "(15) store-and-forward",
+    Constraint.ARRIVAL: "(16a) consumatore dopo l'arrivo del dato",
+    Constraint.LIMIT: "(16b) consegna entro il limite di tempo",
+    Constraint.DELIVERY_TIME: "(28) istante di consegna",
+    Constraint.VISIBILITY_WINDOW: "(17a)-(17c) finestra di visibilità",
+    Constraint.LINK_CONTENTION: "(18)-(19) una trasmissione alla volta sull'arco",
+    Constraint.PLMM_CAPACITY: "(20)-(27) capacità della PLMM",
+    Constraint.COMMITTED: "online: calendario impegnato invariato",
+    Constraint.OBJECTIVE: "obiettivo: il valore riportato è quello del calendario",
+    Constraint.PLAN_RELEASE: "(30)-(31) rilascio del piano",
+}
+"""The name of each family of constraints, in Italian. The details of a finding keep the
+message of the scheduler."""

@@ -44,7 +44,7 @@ class NetworkRuntime:
             StateError: If ``node`` is not a satellite.
         """
         if node not in self._satellites:
-            raise StateError(f"{node!r} is not a satellite")
+            raise StateError(f"{node!r} non è un satellite")
         return self._satellites[node]
 
     def receiver(self, node: NodeId) -> SatelliteRuntime | None:
@@ -60,5 +60,5 @@ class NetworkRuntime:
             StateError: If no link joins the two nodes.
         """
         if (source, target) not in self._links:
-            raise StateError(f"no link joins {source} and {target}")
+            raise StateError(f"nessun link collega {source} e {target}")
         return self._links[(source, target)]

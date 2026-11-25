@@ -282,7 +282,7 @@ def test_a_failure_after_the_delivery_changes_nothing() -> None:
 
 def test_the_runtime_needs_an_accepted_request() -> None:
     env = simpy.Environment()
-    with pytest.raises(StateError, match="accepted"):
+    with pytest.raises(StateError, match="accettata"):
         RequestRuntime(
             env, request(), RequestRecord("R1"), DataLedger(env), (), "GS", Listener()
         )

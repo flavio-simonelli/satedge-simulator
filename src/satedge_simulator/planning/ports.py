@@ -72,14 +72,14 @@ class PlanningDecision:
     def __post_init__(self) -> None:
         if not (math.isfinite(self.solver_time_s) and self.solver_time_s >= 0):
             raise PlannerError(
-                f"solver time must be finite and >= 0, got {self.solver_time_s}"
+                f"il tempo del solver deve essere finito e >= 0, invece è {self.solver_time_s}"
             )
         accepted = {t.request_id for t in self.plan.tasks} | {
             t.request_id for t in self.plan.transfers
         }
         both = accepted & set(self.rejected)
         if both:
-            raise PlannerError(f"requests both accepted and rejected: {sorted(both)}")
+            raise PlannerError(f"richieste sia accettate sia rifiutate: {sorted(both)}")
         object.__setattr__(self, "rejected", MappingProxyType(dict(self.rejected)))
 
 

@@ -34,7 +34,7 @@ type Availability = AlwaysAvailable | WindowedAvailability
 
 def _require_positive_finite(value: float, what: str) -> None:
     if not (math.isfinite(value) and value > 0):
-        raise ScenarioError(f"{what} must be finite and > 0, got {value}")
+        raise ScenarioError(f"{what}: deve essere finito e > 0, invece è {value}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,9 +55,11 @@ class Satellite:
 
     def __post_init__(self) -> None:
         if not self.id:
-            raise ScenarioError("satellite id must be non-empty")
-        _require_positive_finite(self.plmm_capacity_gb, f"{self.id}: PLMM capacity")
-        _require_positive_finite(self.hpc_rate_gbps, f"{self.id}: HPC rate")
+            raise ScenarioError("l'identificativo del satellite non può essere vuoto")
+        _require_positive_finite(
+            self.plmm_capacity_gb, f"{self.id}, capacità della PLMM"
+        )
+        _require_positive_finite(self.hpc_rate_gbps, f"{self.id}, velocità dell'HPC")
 
     def hpc_io_time(self, size_gb: float) -> float:
         """Seconds needed to read ``size_gb`` from the PLMM, or to write it there."""
@@ -76,7 +78,9 @@ class GroundStation:
 
     def __post_init__(self) -> None:
         if not self.id:
-            raise ScenarioError("ground station id must be non-empty")
+            raise ScenarioError(
+                "l'identificativo della ground station non può essere vuoto"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,9 +105,11 @@ class Link:
 
     def __post_init__(self) -> None:
         if self.a == self.b:
-            raise ScenarioError(f"link {self.a}-{self.b} connects a node to itself")
-        _require_positive_finite(self.capacity_gbps, f"link {self.name}: capacity")
-        _require_positive_finite(self.latency_s, f"link {self.name}: latency")
+            raise ScenarioError(
+                f"il link {self.a}-{self.b} collega un nodo a sé stesso"
+            )
+        _require_positive_finite(self.capacity_gbps, f"link {self.name}, capacità")
+        _require_positive_finite(self.latency_s, f"link {self.name}, latenza")
 
     @property
     def name(self) -> str:
@@ -140,10 +146,10 @@ class Plane:
 
     def __post_init__(self) -> None:
         if not self.satellites:
-            raise ScenarioError(f"plane {self.id} has no satellites")
+            raise ScenarioError(f"il piano {self.id} non ha satelliti")
         if self.com not in {s.id for s in self.satellites}:
             raise ScenarioError(
-                f"plane {self.id}: COM {self.com!r} is not one of its satellites"
+                f"piano {self.id}: il COM {self.com!r} non è uno dei suoi satelliti"
             )
 
 
@@ -194,7 +200,7 @@ class Constellation:
         try:
             return self._satellites[node]
         except KeyError:
-            raise ScenarioError(f"unknown satellite {node!r}") from None
+            raise ScenarioError(f"satellite sconosciuto {node!r}") from None
 
     def is_satellite(self, node: NodeId) -> bool:
         """Whether ``node`` is a satellite."""
@@ -207,13 +213,13 @@ class Constellation:
     def _check_nodes(self) -> None:
         plane_ids = [p.id for p in self._planes]
         if len(set(plane_ids)) != len(plane_ids):
-            raise ScenarioError(f"duplicate plane ids {plane_ids}")
+            raise ScenarioError(f"identificativi di piano duplicati {plane_ids}")
         satellite_ids = [s.id for p in self._planes for s in p.satellites]
         if len(set(satellite_ids)) != len(satellite_ids):
-            raise ScenarioError("a satellite identifier is used more than once")
+            raise ScenarioError("un identificativo di satellite è usato più volte")
         if self._ground.id in self._satellites:
             raise ScenarioError(
-                f"ground station id {self._ground.id!r} is also a satellite"
+                f"l'identificativo della ground station {self._ground.id!r} è anche un satellite"
             )
 
     def _check_links(self) -> None:
@@ -222,8 +228,10 @@ class Constellation:
         for link in self._links:
             for endpoint in (link.a, link.b):
                 if endpoint not in known:
-                    raise ScenarioError(f"link {link.name}: unknown node {endpoint!r}")
+                    raise ScenarioError(
+                        f"link {link.name}: nodo sconosciuto {endpoint!r}"
+                    )
             pair = frozenset((link.a, link.b))
             if pair in seen:
-                raise ScenarioError(f"link {link.name} is declared more than once")
+                raise ScenarioError(f"il link {link.name} è dichiarato più volte")
             seen.add(pair)

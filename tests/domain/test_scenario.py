@@ -46,7 +46,7 @@ def test_settings_reject_invalid_values() -> None:
 
 
 def test_request_origin_must_be_a_satellite() -> None:
-    with pytest.raises(ScenarioError, match="not a satellite"):
+    with pytest.raises(ScenarioError, match="non è un satellite"):
         Scenario(constellation(), (request("GS"),), SimulationSettings(end_s=10.0))
 
 

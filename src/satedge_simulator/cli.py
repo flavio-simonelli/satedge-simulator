@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Sequence
-from typing import TextIO
+from typing import Any, NoReturn, TextIO
 
 from satedge_simulator.api import (
     EVENTS_FILE,
@@ -13,10 +13,8 @@ from satedge_simulator.api import (
     SimulationResult,
     simulate_file,
 )
-from satedge_simulator.domain.workload import Priority
 from satedge_simulator.errors import SimulatorError
-
-_CLASS_NAMES = {Priority.URGENT: "urgenti", Priority.NON_URGENT: "non urgenti"}
+from satedge_simulator.texts import PRIORITY_CLASSES, VIOLATIONS
 
 
 def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
@@ -36,12 +34,53 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
     return 0
 
 
+class _Formatter(argparse.HelpFormatter):
+    """Writes the usage line with an Italian prefix."""
+
+    def add_usage(self, usage, actions, groups, prefix=None):  # type: ignore[no-untyped-def]
+        super().add_usage(usage, actions, groups, "uso: " if prefix is None else prefix)
+
+
+class _Parser(argparse.ArgumentParser):
+    """An argument parser whose help and errors are in Italian."""
+
+    _ERRORS = (
+        (
+            "the following arguments are required: ",
+            "mancano gli argomenti obbligatori: ",
+        ),
+        ("unrecognized arguments: ", "argomenti non riconosciuti: "),
+        ("invalid choice: ", "scelta non valida: "),
+        ("expected one argument", "serve un valore"),
+        ("argument ", "argomento "),
+        ("(choose from ", "(valori possibili: "),
+    )
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("formatter_class", _Formatter)
+        kwargs["add_help"] = False
+        super().__init__(*args, **kwargs)
+        self._positionals.title = "argomenti"
+        self._optionals.title = "opzioni"
+        self.add_argument(
+            "-h", "--help", action="help", help="mostra questo aiuto ed esce"
+        )
+
+    def error(self, message: str) -> NoReturn:
+        for english, italian in self._ERRORS:
+            message = message.replace(english, italian)
+        self.print_usage(sys.stderr)
+        self.exit(2, f"{self.prog}: errore: {message}\n")
+
+
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = _Parser(
         prog="satedge-simulator",
         description="Simulatore a eventi discreti della costellazione satellitare edge.",
     )
-    commands = parser.add_subparsers(dest="command", required=True)
+    commands = parser.add_subparsers(
+        title="comandi", dest="command", metavar="comando", required=True
+    )
     run = commands.add_parser(
         "run", help="esegue uno scenario pianificato da satedge-workflow-scheduler"
     )
@@ -49,6 +88,7 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument(
         "-o",
         "--output",
+        metavar="CARTELLA",
         help=f"cartella dei risultati ({EVENTS_FILE} e {METRICS_FILE})",
     )
     return parser
@@ -60,14 +100,14 @@ def _report(result: SimulationResult, output: str | None, out: TextIO) -> None:
     print(f"Simulazione conclusa a {outcome.end_s:g} s.", file=out)
     for c in metrics.requests:
         print(
-            f"Richieste {_CLASS_NAMES[c.priority]}: {c.arrived} arrivate, "
+            f"Richieste {PRIORITY_CLASSES[c.priority]}: {c.arrived} arrivate, "
             f"{c.accepted} accettate, {c.rejected} rifiutate; "
             f"{c.delivered_on_time} consegnate in tempo, {c.delivered_late} in ritardo, "
             f"{c.failed} fallite, {c.unfinished} non concluse.",
             file=out,
         )
     if metrics.violations:
-        kinds = ", ".join(f"{k.value} {n}" for k, n in metrics.violations.items())
+        kinds = ", ".join(f"{VIOLATIONS[k]} {n}" for k, n in metrics.violations.items())
         print(f"Violazioni del piano: {kinds}.", file=out)
     else:
         print("Violazioni del piano: nessuna.", file=out)

@@ -74,7 +74,7 @@ def load_scenario(path: str | Path) -> LoadedScenario:
     solver_path = base / document.planner.solver
     if not solver_path.is_file():
         raise DocumentError(
-            f"{path}: the solver file {document.planner.solver!r} does not exist"
+            f"{path}: il file del solver {document.planner.solver!r} non esiste"
         )
     try:
         scenario = Scenario(

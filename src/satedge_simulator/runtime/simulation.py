@@ -25,6 +25,7 @@ from satedge_simulator.runtime.ground import GroundRuntime
 from satedge_simulator.runtime.installer import PlanInstaller
 from satedge_simulator.runtime.ledger import DataLedger
 from satedge_simulator.runtime.network import NetworkRuntime
+from satedge_simulator.texts import VIOLATIONS
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,7 +81,7 @@ class Simulation:
         lead = lead_time_s if lead_time_s is not None else scenario.lead_time_s
         if lead is None:
             raise ScenarioError(
-                "the lead time of the planner is missing from the scenario"
+                "lo scenario non indica l'anticipo del calcolo del planner"
             )
         self._scenario = scenario
         settings = scenario.settings
@@ -118,7 +119,7 @@ class Simulation:
             StateError: If the simulation already ran.
         """
         if self._ran:
-            raise StateError("the simulation already ran")
+            raise StateError("la simulazione è già stata eseguita")
         self._ran = True
         self._env.run(until=self._end_s)
         records = self._ground.records
@@ -159,8 +160,8 @@ class Simulation:
 
 def _stop(violation: Violation) -> None:
     raise PlanExecutionError(
-        f"{violation.kind} for request {violation.request_id} on {violation.node} "
-        f"at {violation.at_s} s"
+        f"violazione del piano ({VIOLATIONS[violation.kind]}) per la richiesta "
+        f"{violation.request_id} su {violation.node} a {violation.at_s} s"
     )
 
 

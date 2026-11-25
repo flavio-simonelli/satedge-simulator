@@ -19,7 +19,9 @@ class Priority(StrEnum):
 
 def _require_finite_at_least(value: float, minimum: float, what: str) -> None:
     if not (math.isfinite(value) and value >= minimum):
-        raise ScenarioError(f"{what} must be finite and >= {minimum}, got {value}")
+        raise ScenarioError(
+            f"{what}: deve essere finito e >= {minimum}, invece è {value}"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,11 +40,11 @@ class TaskSpec:
     def __post_init__(self) -> None:
         if not (math.isfinite(self.execution_s) and self.execution_s > 0):
             raise ScenarioError(
-                f"task execution must be finite and > 0, got {self.execution_s}"
+                f"il tempo di esecuzione del task deve essere finito e > 0, invece è {self.execution_s}"
             )
         if not (math.isfinite(self.output_size_gb) and self.output_size_gb > 0):
             raise ScenarioError(
-                f"task output must be finite and > 0, got {self.output_size_gb}"
+                f"la dimensione dell'output del task deve essere finita e > 0, invece è {self.output_size_gb}"
             )
 
 
@@ -72,18 +74,20 @@ class RequestSpec:
 
     def __post_init__(self) -> None:
         if not self.id:
-            raise ScenarioError("request id must be non-empty")
+            raise ScenarioError("l'identificativo della richiesta non può essere vuoto")
         if not self.tasks:
             raise ScenarioError(
-                f"request {self.id}: the pipeline needs at least one task"
+                f"richiesta {self.id}: la pipeline deve avere almeno un task"
             )
-        _require_finite_at_least(self.arrival_s, 0.0, f"request {self.id}: arrival")
-        _require_finite_at_least(self.release_s, 0.0, f"request {self.id}: release")
+        _require_finite_at_least(self.arrival_s, 0.0, f"richiesta {self.id}, arrivo")
+        _require_finite_at_least(self.release_s, 0.0, f"richiesta {self.id}, rilascio")
         _require_finite_at_least(
-            self.deadline_s, self.release_s, f"request {self.id}: deadline"
+            self.deadline_s, self.release_s, f"richiesta {self.id}, scadenza"
         )
         if not (math.isfinite(self.raw_size_gb) and self.raw_size_gb > 0):
-            raise ScenarioError(f"request {self.id}: raw size must be finite and > 0")
+            raise ScenarioError(
+                f"richiesta {self.id}: la dimensione del raw deve essere finita e > 0"
+            )
 
     @property
     def output_size_gb(self) -> float:

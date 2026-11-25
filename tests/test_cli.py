@@ -33,3 +33,24 @@ def test_wrong_arguments_exit_with_2() -> None:
     with pytest.raises(SystemExit) as raised:
         main([])
     assert raised.value.code == 2
+
+
+def test_the_help_is_in_italian(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as raised:
+        main(["run", "--help"])
+    assert raised.value.code == 0
+    help_text = capsys.readouterr().out
+    assert help_text.startswith(
+        "uso: satedge-simulator run [-h] [-o CARTELLA] scenario"
+    )
+    assert "mostra questo aiuto ed esce" in help_text
+    assert "argomenti:" in help_text
+    assert "opzioni:" in help_text
+
+
+def test_argument_errors_are_in_italian(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        main(["run"])
+    assert capsys.readouterr().err.endswith(
+        "errore: mancano gli argomenti obbligatori: scenario\n"
+    )

@@ -58,8 +58,8 @@ def planning_epochs(
     Raises:
         ScenarioError: If the lead time or the end is not finite and positive.
     """
-    _require_positive_finite(lead_time_s, "lead time")
-    _require_positive_finite(end_s, "simulation end")
+    _require_positive_finite(lead_time_s, "anticipo del calcolo")
+    _require_positive_finite(end_s, "fine della simulazione")
     planned = [
         (opening - lead_time_s, opening)
         for opening in contact_openings(constellation)
@@ -73,4 +73,4 @@ def planning_epochs(
 
 def _require_positive_finite(value: float, what: str) -> None:
     if not (math.isfinite(value) and value > 0):
-        raise ScenarioError(f"{what} must be finite and > 0, got {value}")
+        raise ScenarioError(f"{what}: deve essere finito e > 0, invece è {value}")

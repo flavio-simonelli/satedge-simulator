@@ -71,7 +71,7 @@ def test_missing_contact_windows_are_a_document_error(tmp_path: Path) -> None:
 def test_unsupported_kind_is_an_explicit_error(tmp_path: Path) -> None:
     text = VALID.replace("kind: ring_constellation", "kind: explicit")
     with pytest.raises(
-        DocumentError, match="unsupported topology kind 'explicit'"
+        DocumentError, match="tipo di topologia non supportato 'explicit'"
     ) as info:
         load_topology(write(tmp_path, text), contact_plan())
     assert "ring_constellation" in str(info.value)

@@ -48,7 +48,7 @@ def test_workload_defaults_deadline_from_the_class(tmp_path: Path) -> None:
 
 def test_workload_rejects_duplicate_identifiers(tmp_path: Path) -> None:
     doc = WORKLOAD.replace("id: R2", "id: R1")
-    with pytest.raises(DocumentError, match="duplicate"):
+    with pytest.raises(DocumentError, match="duplicati"):
         load_workload(write(tmp_path, doc))
 
 

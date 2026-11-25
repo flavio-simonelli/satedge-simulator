@@ -68,7 +68,9 @@ def test_a_violation_fails_only_its_request_by_default() -> None:
 def test_a_violation_stops_a_strict_simulation() -> None:
     planner = ScriptedPlanner({"R1": actions(90.0, 150.0)})
     sim = Simulation(scenario(request(), strict=True), planner)
-    with pytest.raises(PlanExecutionError, match="plan_not_arrived for request R1"):
+    with pytest.raises(
+        PlanExecutionError, match="piano non ancora arrivato.*richiesta R1"
+    ):
         sim.run()
 
 
@@ -85,14 +87,14 @@ def test_the_lead_time_of_the_caller_wins_over_the_scenario() -> None:
 
 
 def test_the_lead_time_is_required() -> None:
-    with pytest.raises(ScenarioError, match="lead time"):
+    with pytest.raises(ScenarioError, match="anticipo"):
         Simulation(scenario(request(), lead_time_s=None), ScriptedPlanner())
 
 
 def test_a_simulation_runs_once() -> None:
     sim = Simulation(scenario(request()), ScriptedPlanner())
     sim.run()
-    with pytest.raises(StateError, match="already ran"):
+    with pytest.raises(StateError, match="già stata eseguita"):
         sim.run()
 
 

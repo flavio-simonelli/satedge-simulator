@@ -41,5 +41,5 @@ class Violation:
     def __post_init__(self) -> None:
         if not (math.isfinite(self.at_s) and self.at_s >= 0):
             raise StateError(
-                f"violation instant must be finite and >= 0, got {self.at_s}"
+                f"l'istante della violazione deve essere finito e >= 0, invece è {self.at_s}"
             )

@@ -18,7 +18,7 @@ EPS = 1e-4
 def test_a_direction_must_join_the_endpoints_of_the_link() -> None:
     env = simpy.Environment()
     link = Link("A", "B", 1.0, 0.1, AlwaysAvailable())
-    with pytest.raises(StateError, match="does not join"):
+    with pytest.raises(StateError, match="non collega"):
         LinkRuntime(env, link, "A", "C", EPS)
 
 

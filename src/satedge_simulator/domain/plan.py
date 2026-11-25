@@ -61,7 +61,7 @@ class PlannedTransfer:
         _check_span(
             self.start_s,
             self.end_s,
-            f"transfer {self.request_id}/{self.data_index} {self.source}->{self.target}",
+            f"trasferimento {self.request_id}/{self.data_index} {self.source}->{self.target}",
         )
 
 
@@ -83,13 +83,11 @@ class EpochPlan:
     def __post_init__(self) -> None:
         keys = [(t.request_id, t.task_index) for t in self.tasks]
         if len(set(keys)) != len(keys):
-            raise ScenarioError(
-                "a task of a request appears more than once in the plan"
-            )
+            raise ScenarioError("un task di una richiesta compare più volte nel piano")
         for node, arrival in self.plan_arrival_s.items():
             if math.isnan(arrival) or arrival < 0:
                 raise ScenarioError(
-                    f"plan arrival at {node} must be >= 0 or inf, got {arrival}"
+                    f"l'arrivo del piano su {node} deve essere >= 0 o inf, invece è {arrival}"
                 )
         object.__setattr__(
             self, "plan_arrival_s", MappingProxyType(dict(self.plan_arrival_s))
@@ -115,6 +113,8 @@ class EpochPlan:
 
 def _check_span(start: float, end: float, what: str) -> None:
     if not (math.isfinite(start) and math.isfinite(end)):
-        raise ScenarioError(f"{what}: instants must be finite")
+        raise ScenarioError(f"{what}: gli istanti devono essere finiti")
     if start < 0 or end <= start:
-        raise ScenarioError(f"{what}: needs 0 <= start < end, got [{start}, {end}]")
+        raise ScenarioError(
+            f"{what}: serve 0 <= inizio < fine, invece è [{start}, {end}]"
+        )

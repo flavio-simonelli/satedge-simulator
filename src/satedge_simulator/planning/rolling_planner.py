@@ -91,7 +91,7 @@ class RollingPlanner:
         unknown = accepted - by_id.keys()
         if unknown:
             raise PlannerError(
-                f"the planner accepted requests it was not asked: {sorted(unknown)}"
+                f"il planner ha accettato richieste che non gli erano state chieste: {sorted(unknown)}"
             )
         for request_id in accepted:
             self._commitments[request_id] = Commitment(
@@ -108,7 +108,7 @@ class RollingPlanner:
 
     def _release_commitment(self, request_id: str) -> None:
         if request_id not in self._commitments:
-            raise StateError(f"request {request_id} is not committed")
+            raise StateError(f"la richiesta {request_id} non è impegnata")
         del self._commitments[request_id]
 
 
