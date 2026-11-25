@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from satedge_simulator.domain.topology import Constellation
 from satedge_simulator.domain.workload import RequestSpec
+from satedge_simulator.domain.workload_model import WorkloadModel
 from satedge_simulator.errors import ScenarioError
 
 
@@ -18,16 +19,23 @@ class SimulationSettings:
         end_s: Instant at which the simulation stops, in seconds.
         tolerance_s: How long an action may wait for its preconditions past its planned instant.
         strict: Whether the first violation of the plan stops the simulation.
+        seed: Initial state of the random number generator, ``0 < seed < 2³¹ − 1``. With the
+            same seed, two runs draw the same workload.
     """
 
     end_s: float
     tolerance_s: float = 1e-4
     strict: bool = False
+    seed: int = 123_456_789
 
     def __post_init__(self) -> None:
         if not (math.isfinite(self.end_s) and self.end_s > 0):
             raise ScenarioError(
                 f"la fine della simulazione deve essere finita e > 0, invece è {self.end_s}"
+            )
+        if not 0 < self.seed < 2_147_483_647:
+            raise ScenarioError(
+                f"il seed deve essere compreso tra 1 e 2147483646, invece è {self.seed}"
             )
         if not (math.isfinite(self.tolerance_s) and self.tolerance_s >= 0):
             raise ScenarioError(
@@ -45,12 +53,15 @@ class Scenario:
         settings: How the execution is run.
         lead_time_s: Seconds the planner has to compute a plan, before the contact with a COM.
             ``None`` means the time limit of the solver is used.
+        workload_model: The stochastic workload, whose requests are drawn during the run, on
+            top of ``requests``; ``None`` for a deterministic workload.
     """
 
     constellation: Constellation
     requests: tuple[RequestSpec, ...]
     settings: SimulationSettings
     lead_time_s: float | None = None
+    workload_model: WorkloadModel | None = None
 
     def __post_init__(self) -> None:
         for request in self.requests:
