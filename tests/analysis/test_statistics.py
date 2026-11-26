@@ -33,7 +33,9 @@ def test_the_interval_uses_students_t_on_the_sample_deviation() -> None:
 def test_an_interval_needs_two_values() -> None:
     assert confidence_interval([]) is None
     single = confidence_interval([7.0])
-    assert single is not None and single.half_width is None and single.low is None
+    assert single is not None
+    assert single.half_width is None
+    assert single.low is None
     with pytest.raises(ScenarioError, match="livello"):
         confidence_interval([1.0, 2.0], level=1.0)
 
@@ -47,6 +49,11 @@ def test_an_alternating_series_is_negatively_correlated_at_lag_one() -> None:
 
 def test_a_constant_series_has_no_autocorrelation() -> None:
     assert autocorrelation([4.0] * 10, 3) == (0.0, 0.0, 0.0)
+
+
+def test_a_constant_series_whose_mean_rounds_has_no_autocorrelation() -> None:
+    # sum([0.1] * 3) / 3 is 0.10000000000000002: the centred values are not all zero.
+    assert autocorrelation([0.1] * 3, 2) == (0.0, 0.0)
 
 
 def test_the_lag_must_fit_in_the_series() -> None:
