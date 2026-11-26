@@ -24,9 +24,14 @@ jobs:
         with:
           enable-cache: true
 
+      # The only step that builds: the project and its git dependency, both first-party
+      # and pinned by uv.lock. --no-build cannot be used, the dependency has no wheel.
+      - name: Install the locked environment
+        run: uv sync --locked  # NOSONAR
+
       - name: Run tests with coverage
         run: >
-          uv run --locked --no-build pytest
+          uv run --no-sync pytest
           --cov=satedge_simulator
           --cov-report=xml:coverage.xml
           --junitxml=test-results.xml

@@ -23,14 +23,19 @@ jobs:
       - name: Check that uv.lock matches pyproject.toml
         run: uv lock --check
 
+      # The only step that builds: the project and its git dependency, both first-party
+      # and pinned by uv.lock. --no-build cannot be used, the dependency has no wheel.
+      - name: Install the locked environment
+        run: uv sync --locked  # NOSONAR
+
       - name: Lint
-        run: uv run --locked ruff check .
+        run: uv run --no-sync ruff check .
 
       - name: Format
-        run: uv run --locked ruff format --check .
+        run: uv run --no-sync ruff format --check .
 
       - name: Type check
-        run: uv run --locked mypy --strict src tests
+        run: uv run --no-sync mypy --strict src tests
 
       - name: Tests
-        run: uv run --locked pytest
+        run: uv run --no-sync pytest
