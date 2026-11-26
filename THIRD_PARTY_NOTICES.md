@@ -7,7 +7,7 @@
 Park, *Discrete-Event Simulation: A First Course*, Prentice Hall, 2006, as translated to Python
 by Philip Steele in <https://github.com/pdsteele/DES-Python>, under the following license.
 
-```
+```text
 The MIT License (MIT)
 
 Copyright (c) 2014 pdsteele

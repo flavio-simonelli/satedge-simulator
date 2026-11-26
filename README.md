@@ -1,16 +1,10 @@
 # satedge-simulator
 
-**satedge-simulator** è un simulatore a eventi discreti dello scheduling di pipeline di
-elaborazione su una costellazione satellitare con calcolo a bordo (*edge computing* in orbita).
+**satedge-simulator** è un simulatore a eventi discreti per lo scheduling di pipeline computazionali su una costellazione satellitare con calcolo a bordo (*edge computing* in orbita).
 Esegue nel tempo il piano calcolato a terra da
 [satedge-workflow-scheduler](https://github.com/flavio-simonelli/satedge-workflow-scheduler) e
 misura come si comporta il sistema reale: richieste consegnate, rifiutate o fallite, tempi di
 risposta, uso degli HPC, dei link e delle memorie di bordo (PLMM).
-
-Il simulatore ha un **modello fisico proprio**, indipendente da quello del pianificatore: il
-piano decide *quando* far partire task e trasmissioni e *come* instradare i dati, ma durate,
-dimensioni, finestre e capacità vengono dal modello del simulatore. Per questo può verificare il
-piano invece di limitarsi a ripeterlo, e confrontare l'esecuzione con il modello MILP.
 
 ```console
 $ uv run satedge-simulator run examples/casostudio/scenario.yaml -o output/casostudio
@@ -28,12 +22,11 @@ Risultati in output/casostudio.
   epoche, la propagazione del piano ai satelliti, i task sugli HPC nelle finestre di calcolo, le
   trasmissioni sui link nelle finestre di visibilità, l'occupazione delle PLMM.
 - **Controlla ogni azione**: un'azione che non può partire come pianificato (dato non pronto,
-  risorsa occupata, finestra chiusa, memoria piena, piano non ancora arrivato) è una violazione,
-  e fa fallire solo la sua richiesta.
+  risorsa occupata, finestra chiusa, memoria piena, piano non ancora arrivato) è una violazione.
 - **Verifica l'esecuzione** con il controllo di ammissibilità dello scheduler: ciò che il
   simulatore ha consegnato deve rispettare tutti i vincoli del modello finale.
 - **Genera il carico** a runtime da un modello stocastico, con il generatore di Lehmer a 256
-  stream di Leemis e Park e un seed esplicito.
+  stream di Leemis e Park e seed esplicito.
 - **Analizza l'output**: repliche indipendenti e transitorio a orizzonte finito, batch means e
   autocorrelazione a orizzonte infinito, con intervalli di confidenza.
 
