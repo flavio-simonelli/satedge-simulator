@@ -29,8 +29,9 @@ def test_a_rejected_request_cannot_be_accepted_later() -> None:
 
 
 def test_a_request_cannot_skip_the_queue() -> None:
+    record = RequestRecord("R1")
     with pytest.raises(StateError):
-        RequestRecord("R1").move(RequestStatus.ACCEPTED, 1.0)
+        record.move(RequestStatus.ACCEPTED, 1.0)
 
 
 def test_a_failed_request_is_final() -> None:

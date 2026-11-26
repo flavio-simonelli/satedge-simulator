@@ -52,35 +52,39 @@ def test_hpc_windows_use_the_usable_length(tmp_path: Path) -> None:
 
 
 def test_unknown_field_names_the_file(tmp_path: Path) -> None:
+    path, plan = write(tmp_path, VALID + "speed: 3\n"), contact_plan()
     with pytest.raises(DocumentError, match="topology.yaml"):
-        load_topology(write(tmp_path, VALID + "speed: 3\n"), contact_plan())
+        load_topology(path, plan)
 
 
 def test_unsupported_version_is_rejected(tmp_path: Path) -> None:
+    path = write(tmp_path, VALID.replace('"1.0.0"', '"3.0.0"'))
+    plan = contact_plan()
     with pytest.raises(DocumentError):
-        load_topology(
-            write(tmp_path, VALID.replace('"1.0.0"', '"3.0.0"')), contact_plan()
-        )
+        load_topology(path, plan)
 
 
 def test_missing_contact_windows_are_a_document_error(tmp_path: Path) -> None:
+    path, no_windows = write(tmp_path, VALID), ContactPlan({})
     with pytest.raises(DocumentError):
-        load_topology(write(tmp_path, VALID), ContactPlan({}))
+        load_topology(path, no_windows)
 
 
 def test_unsupported_kind_is_an_explicit_error(tmp_path: Path) -> None:
     text = VALID.replace("kind: ring_constellation", "kind: explicit")
+    path, plan = write(tmp_path, text), contact_plan()
     with pytest.raises(
         DocumentError, match="tipo di topologia non supportato 'explicit'"
     ) as info:
-        load_topology(write(tmp_path, text), contact_plan())
+        load_topology(path, plan)
     assert "ring_constellation" in str(info.value)
 
 
 def test_missing_kind_is_an_error(tmp_path: Path) -> None:
     text = VALID.replace("kind: ring_constellation\n", "")
+    path, plan = write(tmp_path, text), contact_plan()
     with pytest.raises(DocumentError, match="kind"):
-        load_topology(write(tmp_path, text), contact_plan())
+        load_topology(path, plan)
 
 
 def test_every_field_reaches_the_ring_spec(tmp_path: Path) -> None:
@@ -139,5 +143,6 @@ def test_without_a_horizon_the_windows_go_to_the_end_of_the_simulation(
 
 
 def test_a_horizon_shorter_than_the_simulation_is_an_error(tmp_path: Path) -> None:
+    path, plan = write(tmp_path, VALID), contact_plan()
     with pytest.raises(DocumentError, match="finestre di calcolo fino a"):
-        load_topology(write(tmp_path, VALID), contact_plan(), horizon_s=1e9)
+        load_topology(path, plan, horizon_s=1e9)

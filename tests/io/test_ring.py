@@ -106,5 +106,6 @@ def test_com_index_out_of_range_is_rejected() -> None:
 
 
 def test_missing_contact_windows_are_an_error() -> None:
+    builder = RingConstellationBuilder(CASE_STUDY, ContactPlan({}))
     with pytest.raises(ScenarioError):
-        RingConstellationBuilder(CASE_STUDY, ContactPlan({})).build()
+        builder.build()

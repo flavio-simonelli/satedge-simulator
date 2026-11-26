@@ -54,18 +54,17 @@ def test_link_is_symmetric_and_knows_its_availability() -> None:
 
 
 def test_plane_com_must_be_one_of_its_satellites() -> None:
+    satellites = (sat("A"),)
     with pytest.raises(ScenarioError):
-        Plane(1, (sat("A"),), com="B")
+        Plane(1, satellites, com="B")
 
 
 def test_constellation_rejects_unknown_link_endpoint() -> None:
     plane = Plane(1, (sat("A"), sat("B")), com="A")
+    ground = GroundStation("GS")
+    to_unknown = Link("A", "X", 1.0, 0.015, AlwaysAvailable())
     with pytest.raises(ScenarioError):
-        Constellation(
-            [plane],
-            GroundStation("GS"),
-            [Link("A", "X", 1.0, 0.015, AlwaysAvailable())],
-        )
+        Constellation([plane], ground, [to_unknown])
 
 
 def test_constellation_rejects_duplicate_link_in_either_order() -> None:

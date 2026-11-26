@@ -48,10 +48,12 @@ def test_workload_defaults_deadline_from_the_class(tmp_path: Path) -> None:
 
 def test_workload_rejects_duplicate_identifiers(tmp_path: Path) -> None:
     doc = WORKLOAD.replace("id: R2", "id: R1")
+    path = write(tmp_path, doc)
     with pytest.raises(DocumentError, match="duplicati"):
-        load_workload(write(tmp_path, doc))
+        load_workload(path)
 
 
 def test_workload_rejects_unknown_priority(tmp_path: Path) -> None:
+    path = write(tmp_path, WORKLOAD.replace("urgent", "soon", 1))
     with pytest.raises(DocumentError):
-        load_workload(write(tmp_path, WORKLOAD.replace("urgent", "soon", 1)))
+        load_workload(path)

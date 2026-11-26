@@ -41,8 +41,9 @@ def test_unsupported_schema_version_is_rejected(tmp_path: Path) -> None:
 
 def test_overlapping_windows_are_rejected(tmp_path: Path) -> None:
     text = VALID.replace("{start_s: 2820, end_s: 3000}", "{start_s: 200, end_s: 300}")
+    path = write(tmp_path, text)
     with pytest.raises(DocumentError):
-        load_contact_plan(write(tmp_path, text))
+        load_contact_plan(path)
 
 
 def test_missing_file_is_a_document_error(tmp_path: Path) -> None:
@@ -51,5 +52,6 @@ def test_missing_file_is_a_document_error(tmp_path: Path) -> None:
 
 
 def test_invalid_yaml_is_a_document_error(tmp_path: Path) -> None:
+    path = write(tmp_path, "links: [unclosed")
     with pytest.raises(DocumentError, match="YAML non valido"):
-        load_contact_plan(write(tmp_path, "links: [unclosed"))
+        load_contact_plan(path)

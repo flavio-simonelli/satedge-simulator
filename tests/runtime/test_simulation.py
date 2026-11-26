@@ -87,8 +87,10 @@ def test_the_lead_time_of_the_caller_wins_over_the_scenario() -> None:
 
 
 def test_the_lead_time_is_required() -> None:
+    without_lead_time = scenario(request(), lead_time_s=None)
+    planner = ScriptedPlanner()
     with pytest.raises(ScenarioError, match="anticipo"):
-        Simulation(scenario(request(), lead_time_s=None), ScriptedPlanner())
+        Simulation(without_lead_time, planner)
 
 
 def test_a_simulation_runs_once() -> None:

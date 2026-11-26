@@ -19,22 +19,28 @@ def _imported_roots(path: Path) -> set[str]:
     return roots
 
 
-def _sources() -> list[Path]:
-    return sorted(PACKAGE.rglob("*.py"))
+def _sources(*, inside: Path | None = None, outside: Path | None = None) -> list[Path]:
+    """The source files under ``inside`` (default: the package) and not under ``outside``."""
+    return sorted(
+        path
+        for path in (inside or PACKAGE).rglob("*.py")
+        if outside is None or outside not in path.parents
+    )
 
 
-@pytest.mark.parametrize("path", _sources(), ids=lambda p: str(p.relative_to(PACKAGE)))
+def _id(path: Path) -> str:
+    return str(path.relative_to(PACKAGE))
+
+
+@pytest.mark.parametrize(
+    "path", _sources(outside=PACKAGE / "planning" / "adapters" / "scheduler"), ids=_id
+)
 def test_only_the_adapter_imports_the_scheduler(path: Path) -> None:
-    adapter = PACKAGE / "planning" / "adapters" / "scheduler"
-    if adapter in path.parents:
-        return
     assert "satedge_workflow_scheduler" not in _imported_roots(path)
 
 
-@pytest.mark.parametrize("path", _sources(), ids=lambda p: str(p.relative_to(PACKAGE)))
+@pytest.mark.parametrize("path", _sources(outside=PACKAGE / "runtime"), ids=_id)
 def test_only_the_runtime_imports_simpy(path: Path) -> None:
-    if PACKAGE / "runtime" in path.parents:
-        return
     assert "simpy" not in _imported_roots(path)
 
 
@@ -49,10 +55,8 @@ def _imported_modules(path: Path) -> set[str]:
     return modules
 
 
-@pytest.mark.parametrize("path", _sources(), ids=lambda p: str(p.relative_to(PACKAGE)))
+@pytest.mark.parametrize("path", _sources(inside=PACKAGE / "domain"), ids=_id)
 def test_the_domain_does_not_depend_on_io(path: Path) -> None:
-    if PACKAGE / "domain" not in path.parents:
-        return
     assert not any(
         m.startswith("satedge_simulator.io") for m in _imported_modules(path)
     )

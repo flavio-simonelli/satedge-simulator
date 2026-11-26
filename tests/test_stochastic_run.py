@@ -43,7 +43,8 @@ def test_the_requests_are_drawn_during_the_run() -> None:
 
 
 def test_the_same_seed_gives_the_same_run_and_another_seed_another() -> None:
-    assert history(run(scenario())) == history(run(scenario()))
+    first, second = history(run(scenario())), history(run(scenario()))
+    assert first == second
     assert history(run(scenario())) != history(run(scenario(seed=42)))
 
 

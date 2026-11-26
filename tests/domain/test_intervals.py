@@ -37,10 +37,12 @@ def test_window_clipped_duration() -> None:
 def test_window_set_sorts_and_rejects_overlap_or_touch() -> None:
     ws = WindowSet([Window(30.0, 40.0), Window(0.0, 10.0)])
     assert [w.start for w in ws] == [0.0, 30.0]
+    touching = [Window(0.0, 10.0), Window(10.0, 20.0)]
     with pytest.raises(ScenarioError):
-        WindowSet([Window(0.0, 10.0), Window(10.0, 20.0)])
+        WindowSet(touching)
+    overlapping = [Window(0.0, 10.0), Window(5.0, 20.0)]
     with pytest.raises(ScenarioError):
-        WindowSet([Window(0.0, 10.0), Window(5.0, 20.0)])
+        WindowSet(overlapping)
 
 
 def test_window_set_containing() -> None:
@@ -68,7 +70,8 @@ def test_total_duration_before_an_instant() -> None:
 
 
 def test_window_set_equality() -> None:
-    assert WindowSet([Window(0.0, 1.0)]) == WindowSet([Window(0.0, 1.0)])
+    one, same = WindowSet([Window(0.0, 1.0)]), WindowSet([Window(0.0, 1.0)])
+    assert one == same
     assert WindowSet() != WindowSet([Window(0.0, 1.0)])
 
 

@@ -114,4 +114,5 @@ class RollingPlanner:
 
 def released_at(request: RequestSpec, epoch_start_s: float) -> RequestSpec:
     """The request as an epoch sees it: none of its actions can start before the epoch."""
-    return replace(request, release_s=max(request.release_s, epoch_start_s))
+    # Sonar does not resolve the generic signature of replace(); mypy --strict does.
+    return replace(request, release_s=max(request.release_s, epoch_start_s))  # NOSONAR

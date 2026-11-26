@@ -43,7 +43,8 @@ def test_each_replication_gives_one_value_per_statistic() -> None:
     for statistic in Statistic:
         assert len(report.per_replication[statistic]) == 3
         estimate = report.estimates[statistic]
-        assert estimate is not None and estimate.count == 3
+        assert estimate is not None
+        assert estimate.count == 3
     responses = report.per_replication[Statistic.RESPONSE]
     assert len(set(responses)) == 3  # independent replications: three different values
 
@@ -70,8 +71,11 @@ def test_the_first_replication_is_the_run_planted_from_the_seed() -> None:
 
 
 def test_replications_need_at_least_two() -> None:
+    the_scenario, the_planner = scenario(), planner()
     with pytest.raises(ScenarioError, match="almeno 2"):
-        replicate(scenario(), planner(), replications=1, cell_s=3600.0, welch_window=1)
+        replicate(
+            the_scenario, the_planner, replications=1, cell_s=3600.0, welch_window=1
+        )
 
 
 def test_batch_means_discard_the_warmup_and_cut_whole_batches() -> None:
@@ -83,16 +87,16 @@ def test_batch_means_discard_the_warmup_and_cut_whole_batches() -> None:
         len(report.results[Statistic.HPC_UTILIZATION].means) == (28800 - 5640) // 5640
     )
     response = report.results[Statistic.RESPONSE]
-    assert response.interval is not None and response.interval.count == len(
-        response.means
-    )
+    assert response.interval is not None
+    assert response.interval.count == len(response.means)
 
 
 def test_the_warmup_must_be_before_the_end() -> None:
+    the_scenario, the_planner = scenario(), planner()
     with pytest.raises(ScenarioError, match="riscaldamento"):
         batch_means(
-            scenario(),
-            planner(),
+            the_scenario,
+            the_planner,
             warmup_s=28800.0,
             batch_size=4,
             batch_duration_s=5640.0,

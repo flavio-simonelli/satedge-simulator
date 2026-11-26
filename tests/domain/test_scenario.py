@@ -46,13 +46,16 @@ def test_settings_reject_invalid_values() -> None:
 
 
 def test_request_origin_must_be_a_satellite() -> None:
+    the_constellation, from_ground = constellation(), request("GS")
+    settings = SimulationSettings(end_s=10.0)
     with pytest.raises(ScenarioError, match="non è un satellite"):
-        Scenario(constellation(), (request("GS"),), SimulationSettings(end_s=10.0))
+        Scenario(the_constellation, (from_ground,), settings)
 
 
 def test_lead_time_must_be_positive_when_given() -> None:
+    the_constellation, settings = constellation(), SimulationSettings(end_s=10.0)
     with pytest.raises(ScenarioError):
-        Scenario(constellation(), (), SimulationSettings(end_s=10.0), lead_time_s=0.0)
+        Scenario(the_constellation, (), settings, lead_time_s=0.0)
 
 
 def test_valid_scenario_keeps_its_parts() -> None:

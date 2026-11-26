@@ -19,8 +19,9 @@ def test_action_spans_must_be_ordered_and_finite() -> None:
 
 def test_a_task_appears_once() -> None:
     task = PlannedTask("R1", 0, "A", 0.0, 10.0)
+    again = PlannedTask("R1", 0, "B", 20.0, 30.0)
     with pytest.raises(ScenarioError, match="più volte"):
-        EpochPlan(tasks=(task, PlannedTask("R1", 0, "B", 20.0, 30.0)))
+        EpochPlan(tasks=(task, again))
 
 
 def test_plan_arrival_must_be_nonnegative_or_infinite() -> None:

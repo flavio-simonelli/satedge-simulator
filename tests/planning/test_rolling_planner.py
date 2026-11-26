@@ -141,8 +141,9 @@ def test_delivery_and_failure_release_the_commitment() -> None:
 
 
 def test_releasing_an_unknown_commitment_is_a_defect() -> None:
+    rolling = RollingPlanner(ScriptedPlanner(), constellation())
     with pytest.raises(StateError):
-        RollingPlanner(ScriptedPlanner(), constellation()).on_delivered("R9")
+        rolling.on_delivered("R9")
 
 
 def test_accepting_a_request_that_was_not_asked_is_a_planner_error() -> None:
@@ -152,5 +153,6 @@ def test_accepting_a_request_that_was_not_asked_is_a_planner_error() -> None:
             return PlanningDecision(plan=EpochPlan(tasks=(ghost,)))
 
     rolling = RollingPlanner(Invented(), constellation())
+    requests = [request("R1")]
     with pytest.raises(PlannerError, match="GHOST"):
-        rolling.plan_epoch(EPOCH, [request("R1")])
+        rolling.plan_epoch(EPOCH, requests)

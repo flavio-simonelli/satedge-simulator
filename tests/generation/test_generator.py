@@ -45,7 +45,8 @@ def occupancy(request: RequestSpec, rate_gbps: float) -> list[float]:
 
 
 def test_the_same_seed_draws_the_same_workload() -> None:
-    assert draw(n=50) == draw(n=50)
+    first, second = draw(n=50), draw(n=50)
+    assert first == second
     assert draw(n=50) != draw(seed=42, n=50)
 
 
@@ -72,8 +73,9 @@ def test_parameters_that_cannot_fit_in_a_window_are_rejected() -> None:
         raw_size_gb=Range(12.0, 12.0),
         work_s_per_gb=Range(24.0, 24.0),
     )
+    the_constellation, rng = constellation(), MultiStreamRng(1)
     with pytest.raises(ScenarioError, match="finestra di calcolo"):
-        RequestGenerator(heavy, constellation(), MultiStreamRng(1))
+        RequestGenerator(heavy, the_constellation, rng)
 
 
 def test_the_quantities_stay_in_their_ranges() -> None:
@@ -115,7 +117,7 @@ def test_each_quantity_has_its_own_stream() -> None:
 
 
 def test_an_unknown_origin_is_rejected() -> None:
+    ghost = replace(MODEL, origins=("GHOST",))
+    the_constellation, rng = constellation(), MultiStreamRng(1)
     with pytest.raises(ScenarioError, match="GHOST"):
-        RequestGenerator(
-            replace(MODEL, origins=("GHOST",)), constellation(), MultiStreamRng(1)
-        )
+        RequestGenerator(ghost, the_constellation, rng)
