@@ -30,6 +30,15 @@ class StateError(SimulatorError):
     """Internal inconsistency of the simulator: a defect, not a violation of the plan."""
 
 
+class RandomParameterError(SimulatorError, ValueError):
+    """A parameter out of range for the random number libraries: a seed, a stream index, the
+    parameter of a distribution, a probability.
+
+    It is a :class:`ValueError` too, since the libraries know nothing of the scenario: whoever
+    takes the parameter from the scenario validates it first and raises :class:`ScenarioError`.
+    """
+
+
 class StreamExhaustedError(SimulatorError):
     """A stream of random numbers used up its share of the cycle of the generator.
 

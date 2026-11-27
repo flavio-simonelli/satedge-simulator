@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import RandomParameterError
 
 TINY = 1.0e-10
 """Convergence threshold of the iterations."""
@@ -186,9 +186,9 @@ def in_beta(a: float, b: float, x: float) -> float:
 
 def _require_probability(u: float) -> None:
     if not 0.0 < u < 1.0:
-        raise ScenarioError(f"serve una probabilità 0 < u < 1, invece u = {u}")
+        raise RandomParameterError(f"serve una probabilità 0 < u < 1, invece u = {u}")
 
 
 def _require_degrees(n: int) -> None:
     if n < 1:
-        raise ScenarioError(f"servono almeno 1 grado di libertà, invece n = {n}")
+        raise RandomParameterError(f"servono almeno 1 grado di libertà, invece n = {n}")

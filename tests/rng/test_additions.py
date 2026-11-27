@@ -11,7 +11,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from satedge_simulator.errors import ScenarioError, StreamExhaustedError
+from satedge_simulator.errors import RandomParameterError, StreamExhaustedError
 from satedge_simulator.rng.rngs import MODULUS, STREAM_LENGTH, STREAMS, MultiStreamRng
 from satedge_simulator.rng.rvgs import (
     balanced_hyperexponential,
@@ -71,14 +71,14 @@ def test_a_stream_that_used_up_its_arc_raises_instead_of_repeating() -> None:
 
 @pytest.mark.parametrize("seed", [0, -1, MODULUS])
 def test_the_seed_must_be_a_state_of_the_generator(seed: int) -> None:
-    with pytest.raises(ScenarioError, match="seed"):
+    with pytest.raises(RandomParameterError, match="seed"):
         MultiStreamRng(seed)
 
 
 @pytest.mark.parametrize("index", [-1, STREAMS])
 def test_the_stream_index_must_exist(index: int) -> None:
     rng = MultiStreamRng(42)
-    with pytest.raises(ScenarioError, match="stream"):
+    with pytest.raises(RandomParameterError, match="stream"):
         rng.stream(index)
 
 
@@ -110,18 +110,18 @@ def test_the_hyperexponential_mean_on_many_draws() -> None:
 # The checks on the parameters: the original libraries have none.
 
 
-def test_invalid_variate_parameters_are_scenario_errors() -> None:
+def test_invalid_variate_parameters_are_rejected() -> None:
     stream = Scripted(0.5)
-    with pytest.raises(ScenarioError, match="Exponential"):
+    with pytest.raises(RandomParameterError, match="Exponential"):
         exponential(stream, 0.0)
-    with pytest.raises(ScenarioError, match="Uniform"):
+    with pytest.raises(RandomParameterError, match="Uniform"):
         uniform(stream, 3.0, 3.0)
-    with pytest.raises(ScenarioError, match="coefficiente di variazione"):
+    with pytest.raises(RandomParameterError, match="coefficiente di variazione"):
         balanced_hyperexponential(1.0, 1.0)
 
 
 def test_the_quantile_needs_a_probability_and_degrees_of_freedom() -> None:
-    with pytest.raises(ScenarioError):
+    with pytest.raises(RandomParameterError):
         idf_student(10, 1.0)
-    with pytest.raises(ScenarioError):
+    with pytest.raises(RandomParameterError):
         idf_student(0, 0.5)

@@ -20,7 +20,7 @@ translation by Philip Steele (2014, MIT License).
 
 from __future__ import annotations
 
-from satedge_simulator.errors import ScenarioError, StreamExhaustedError
+from satedge_simulator.errors import RandomParameterError, StreamExhaustedError
 
 MODULUS = 2_147_483_647
 """``m = 2³¹ − 1``, a prime: the generator has period ``m − 1``."""
@@ -107,12 +107,12 @@ class MultiStreamRng:
         seed: The initial state of stream 0, with ``0 < seed < m``.
 
     Raises:
-        ScenarioError: If the seed is out of range.
+        RandomParameterError: If the seed is out of range.
     """
 
     def __init__(self, seed: int = DEFAULT_SEED) -> None:
         if not 0 < seed < MODULUS:
-            raise ScenarioError(
+            raise RandomParameterError(
                 f"il seed deve essere compreso tra 1 e {MODULUS - 1}, invece è {seed}"
             )
         self._seed = seed
@@ -130,10 +130,10 @@ class MultiStreamRng:
         """Stream ``index``: always the same object for the same index.
 
         Raises:
-            ScenarioError: If the index is not between 0 and 255.
+            RandomParameterError: If the index is not between 0 and 255.
         """
         if not 0 <= index < STREAMS:
-            raise ScenarioError(
+            raise RandomParameterError(
                 f"lo stream deve essere compreso tra 0 e {STREAMS - 1}, invece è {index}"
             )
         return self._streams[index]
