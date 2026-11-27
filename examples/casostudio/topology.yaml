@@ -1,11 +1,13 @@
-# Caso di studio: 2 piani da 9 satelliti, una stazione a terra. Ogni piano è un anello di
-# link sempre disponibili (ring: true), quindi non sono scritti. I link COM–COM e COM–Terra hanno
-# le loro finestre di visibilità sulle 8 ore di simulazione.
+# Caso di studio: 2 piani da 9 satelliti, una stazione a terra. Ogni piano è un anello: i suoi
+# link tra vicini sono sempre disponibili. I link COM–COM e COM–Terra hanno le loro finestre di
+# visibilità sulle 8 ore di simulazione.
 schema_version: "1.0.0"
-ground_station: GS
+ground_station:
+  name: GS
+  antennas:
+    - {rate_gbps: 1.0}   # numero di antenne da confermare
 planes:
   - name: P1
-    ring: true
     nodes:
       - {name: COM1, type: com}
       - {name: P1-S1, type: sar}
@@ -17,7 +19,6 @@ planes:
       - {name: P1-S7, type: sar}
       - {name: P1-S8, type: sar}
   - name: P2
-    ring: true
     nodes:
       - {name: COM2, type: com}
       - {name: P2-S1, type: sar}
@@ -48,3 +49,57 @@ links:
 #   - a: COM2
 #     b: GS
 #     availability: {kind: periodic, first_start_s: 3900, period_s: 2820, duration_s: 180}
+  - a: COM1
+    b: P1-S1
+    availability: {kind: always}
+  - a: P1-S1
+    b: P1-S2
+    availability: {kind: always}
+  - a: P1-S2
+    b: P1-S3
+    availability: {kind: always}
+  - a: P1-S3
+    b: P1-S4
+    availability: {kind: always}
+  - a: P1-S4
+    b: P1-S5
+    availability: {kind: always}
+  - a: P1-S5
+    b: P1-S6
+    availability: {kind: always}
+  - a: P1-S6
+    b: P1-S7
+    availability: {kind: always}
+  - a: P1-S7
+    b: P1-S8
+    availability: {kind: always}
+  - a: P1-S8
+    b: COM1
+    availability: {kind: always}
+  - a: COM2
+    b: P2-S1
+    availability: {kind: always}
+  - a: P2-S1
+    b: P2-S2
+    availability: {kind: always}
+  - a: P2-S2
+    b: P2-S3
+    availability: {kind: always}
+  - a: P2-S3
+    b: P2-S4
+    availability: {kind: always}
+  - a: P2-S4
+    b: P2-S5
+    availability: {kind: always}
+  - a: P2-S5
+    b: P2-S6
+    availability: {kind: always}
+  - a: P2-S6
+    b: P2-S7
+    availability: {kind: always}
+  - a: P2-S7
+    b: P2-S8
+    availability: {kind: always}
+  - a: P2-S8
+    b: COM2
+    availability: {kind: always}

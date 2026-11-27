@@ -2,8 +2,8 @@
 
 A plane is an orbit, even one with a single satellite. Each satellite of a plane has the type of
 a satellite of the satellites file. A link is between two nodes, which are satellites or the
-ground station, and each link states its availability. A plane with ``ring: true`` links its
-satellites in a cycle, always available, so those links need not be written.
+ground station, and each link states its availability. Every link is written, even the ones
+that join neighbours of a plane.
 """
 
 from __future__ import annotations
@@ -24,16 +24,26 @@ class NodeDoc(Document):
     type: str
 
 
-class PlaneDoc(Document):
-    """A plane, that is an orbit, with its satellites.
+class GroundAntennaDoc(Document):
+    """One antenna of the ground station: its rate. It links to any satellite that has one."""
 
-    ``ring``: whether the satellites are linked in a cycle, in the order they are listed, with
-    links that are always available. A plane of two satellites has one such link; a plane of one
-    has none.
+    rate_gbps: float = Field(gt=0)
+
+
+class GroundStationDoc(Document):
+    """The ground station: the node that the links to the ground join.
+
+    Each antenna limits how many links the station carries at once.
     """
 
     name: str
-    ring: bool = False
+    antennas: list[GroundAntennaDoc] = Field(min_length=1)
+
+
+class PlaneDoc(Document):
+    """A plane, that is an orbit, with its satellites."""
+
+    name: str
     nodes: list[NodeDoc] = Field(min_length=1)
 
 
@@ -53,22 +63,11 @@ class LinkDoc(Document):
         return self
 
 
-def _ring_pairs(names: list[str]) -> list[frozenset[str]]:
-    """The node pairs linked by a ring over ``names``, in the order they are listed."""
-    if len(names) < 2:
-        return []
-    if len(names) == 2:
-        return [frozenset(names)]
-    return [
-        frozenset((names[k], names[(k + 1) % len(names)])) for k in range(len(names))
-    ]
-
-
 class TopologyDoc(VersionedDocument):
     """A topology file: the planes, the ground station, and the links with their availability."""
 
     SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
-    ground_station: str
+    ground_station: GroundStationDoc
     planes: list[PlaneDoc] = Field(min_length=1)
     links: list[LinkDoc] = Field(default_factory=list)
 
@@ -77,27 +76,20 @@ class TopologyDoc(VersionedDocument):
         names = [node.name for plane in self.planes for node in plane.nodes]
         if len(set(names)) != len(names):
             raise ValueError("node names must be unique across the planes")
-        if self.ground_station in names:
-            raise ValueError(
-                f"the ground station {self.ground_station!r} is also a satellite"
-            )
-        known = {*names, self.ground_station}
+        ground = self.ground_station.name
+        if ground in names:
+            raise ValueError(f"the ground station {ground!r} is also a satellite")
+        known = {*names, ground}
         for link in self.links:
             for end in (link.a, link.b):
                 if end not in known:
                     raise ValueError(
                         f"link {link.a}-{link.b} refers to unknown node {end!r}"
                     )
-        implicit = {
-            pair
-            for plane in self.planes
-            if plane.ring
-            for pair in _ring_pairs([node.name for node in plane.nodes])
-        }
         seen: set[frozenset[str]] = set()
         for link in self.links:
             pair = frozenset((link.a, link.b))
-            if pair in seen or pair in implicit:
+            if pair in seen:
                 raise ValueError(f"link {link.a}-{link.b} is declared more than once")
             seen.add(pair)
         return self
