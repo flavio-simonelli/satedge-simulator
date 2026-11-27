@@ -14,7 +14,7 @@ documentati qui per chi estende il simulatore. Le docstring sono in inglese, com
 ```{eval-rst}
 .. automodule:: satedge_simulator.domain.scenario
 .. automodule:: satedge_simulator.domain.topology
-.. automodule:: satedge_simulator.domain.workload
+.. automodule:: satedge_simulator.domain.requests
 .. automodule:: satedge_simulator.domain.workload_model
 .. automodule:: satedge_simulator.domain.plan
 .. automodule:: satedge_simulator.domain.lifecycle

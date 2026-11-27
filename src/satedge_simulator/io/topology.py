@@ -9,19 +9,36 @@ that join neighbours of a plane.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import ClassVar
+from typing import Annotated, ClassVar, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
-from satedge_simulator.io.availability import AvailabilityDoc
+from satedge_simulator.io.availability import (
+    AvailabilityDoc,
+    AvailabilityKind,
+    WindowDoc,
+)
 from satedge_simulator.io.base import Document, VersionedDocument, read_document
 
 
-class NodeDoc(Document):
-    """A satellite of a plane: its name, and the type it has in the satellites file."""
+class PhasedNodeDoc(Document):
+    """A satellite of a periodic plane: its name, its type, and its phase in the orbit.
+
+    ``first_start_s`` is the instant the first window of its HPC opens. The other windows follow
+    every period of the plane.
+    """
 
     name: str
     type: str
+    first_start_s: float = Field(ge=0)
+
+
+class ListedNodeDoc(Document):
+    """A satellite of a plane whose HPC windows are listed: its name, its type, and its windows."""
+
+    name: str
+    type: str
+    hpc_windows: list[WindowDoc]
 
 
 class GroundAntennaDoc(Document):
@@ -40,11 +57,31 @@ class GroundStationDoc(Document):
     antennas: list[GroundAntennaDoc] = Field(min_length=1)
 
 
-class PlaneDoc(Document):
-    """A plane, that is an orbit, with its satellites."""
+class PeriodicPlaneDoc(Document):
+    """A plane whose HPCs open periodically: period and duration are those of the orbit, written
+    once, here.
+
+    Each satellite follows that period from its own ``first_start_s``, or, if it gives its own
+    ``hpc_windows`` instead, its HPC uses those windows and the period does not apply to it.
+    """
 
     name: str
-    nodes: list[NodeDoc] = Field(min_length=1)
+    kind: Literal[AvailabilityKind.PERIODIC]
+    period_s: float = Field(gt=0)
+    duration_s: float = Field(gt=0)
+    nodes: list[PhasedNodeDoc | ListedNodeDoc] = Field(min_length=1)
+
+
+class ListedPlaneDoc(Document):
+    """A plane whose HPC windows are not periodic: each satellite lists its own windows."""
+
+    name: str
+    kind: Literal[AvailabilityKind.WINDOWS]
+    nodes: list[ListedNodeDoc] = Field(min_length=1)
+
+
+PlaneDoc = Annotated[PeriodicPlaneDoc | ListedPlaneDoc, Field(discriminator="kind")]
+"""A plane: its kind tells whether its satellites give a phase or their own windows."""
 
 
 class LinkDoc(Document):
@@ -54,14 +91,6 @@ class LinkDoc(Document):
     b: str
     availability: AvailabilityDoc
 
-    @model_validator(mode="after")
-    def _two_different_nodes(self) -> LinkDoc:
-        if self.a == self.b:
-            raise ValueError(
-                f"a link joins two different nodes, but both are {self.a!r}"
-            )
-        return self
-
 
 class TopologyDoc(VersionedDocument):
     """A topology file: the planes, the ground station, and the links with their availability."""
@@ -70,29 +99,6 @@ class TopologyDoc(VersionedDocument):
     ground_station: GroundStationDoc
     planes: list[PlaneDoc] = Field(min_length=1)
     links: list[LinkDoc] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _links_refer_to_known_nodes(self) -> TopologyDoc:
-        names = [node.name for plane in self.planes for node in plane.nodes]
-        if len(set(names)) != len(names):
-            raise ValueError("node names must be unique across the planes")
-        ground = self.ground_station.name
-        if ground in names:
-            raise ValueError(f"the ground station {ground!r} is also a satellite")
-        known = {*names, ground}
-        for link in self.links:
-            for end in (link.a, link.b):
-                if end not in known:
-                    raise ValueError(
-                        f"link {link.a}-{link.b} refers to unknown node {end!r}"
-                    )
-        seen: set[frozenset[str]] = set()
-        for link in self.links:
-            pair = frozenset((link.a, link.b))
-            if pair in seen:
-                raise ValueError(f"link {link.a}-{link.b} is declared more than once")
-            seen.add(pair)
-        return self
 
 
 def read_topology(path: str | Path) -> TopologyDoc:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from satedge_simulator.domain.topology import Constellation
 from satedge_simulator.domain.workload_model import WorkloadModel
-from satedge_simulator.errors import ScenarioError, StateError
+from satedge_simulator.errors import DomainError, StateError
 
 
 class StageSplitter:
@@ -46,11 +46,12 @@ class StageSplitter:
         slowest HPC: a task that fits there fits on any satellite.
 
         Raises:
-            ScenarioError: If the largest pipeline does not fit even with the most stages.
+            DomainError: If the largest pipeline does not fit even with the most stages.
         """
         satellites = constellation.satellites
         window = min(
-            max((w.duration for w in s.hpc_windows), default=0.0) for s in satellites
+            max((w.duration for w in s.hpc_windows.windows), default=0.0)
+            for s in satellites
         )
         splitter = cls(
             bounds=model.stages,
@@ -60,7 +61,7 @@ class StageSplitter:
             worst_final_gb=model.final_output_gb.high,
         )
         if splitter.fewest(model.raw_size_gb.high, model.work_s_per_gb.high) is None:
-            raise ScenarioError(
+            raise DomainError(
                 f"con questi parametri un task può superare la finestra di calcolo di "
                 f"{window:g} s anche con {model.stages[1]} stadi"
             )

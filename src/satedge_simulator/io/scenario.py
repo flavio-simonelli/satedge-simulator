@@ -69,12 +69,15 @@ def read_scenario(path: str | Path) -> ScenarioFiles:
 
 
 def _check_references(path: str | Path, files: ScenarioFiles) -> None:
-    """The names used by one file must be defined by the others."""
+    """The names used by one file must be defined by the others.
+
+    This is about the references only: whether a value is meaningful is for the domain.
+    """
     nodes = {node.name: node for plane in files.topology.planes for node in plane.nodes}
-    for name, node in nodes.items():
+    for node in nodes.values():
         if node.type not in files.satellites:
             raise DocumentError(
-                f"{path}: node {name} has the type {node.type!r}, "
+                f"{path}: node {node.name} has the type {node.type!r}, "
                 "which the satellites file does not define"
             )
     if isinstance(files.workload, ExplicitWorkloadDoc):

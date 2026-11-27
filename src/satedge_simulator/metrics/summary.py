@@ -9,9 +9,9 @@ from types import MappingProxyType
 
 from satedge_simulator.domain.lifecycle import RequestRecord
 from satedge_simulator.domain.plan import EpochPlan
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import NodeId
 from satedge_simulator.domain.violations import Violation, ViolationKind
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.metrics.as_run import AsRun
 from satedge_simulator.metrics.distribution import Distribution
 from satedge_simulator.metrics.epochs import EpochCollector, EpochMetrics

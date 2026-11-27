@@ -6,9 +6,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
-from satedge_simulator.io.availability import AvailabilityDoc, PeriodicDoc
 from satedge_simulator.io.base import Document, VersionedDocument, read_document
 
 
@@ -34,27 +33,14 @@ class PlmmDoc(Document):
 
 
 class HpcDoc(Document):
-    """The HPC of a satellite: its router rate, its memory, its start-up, and when it is available.
+    """The HPC of a satellite type: its router rate and its memory.
 
-    ``startup_s`` is the part of each availability spent starting the containers. It must be
-    shorter than a periodic availability, so that some of it is left to compute.
+    When the HPC is available comes from the plane, and the start-up of its containers from each
+    satellite, in the topology file.
     """
 
     rate_gbps: float = Field(gt=0)
     memory_gb: float = Field(gt=0)
-    startup_s: float = Field(default=0, ge=0)
-    availability: AvailabilityDoc
-
-    @model_validator(mode="after")
-    def _startup_leaves_time_to_compute(self) -> HpcDoc:
-        if (
-            isinstance(self.availability, PeriodicDoc)
-            and self.startup_s >= self.availability.duration_s
-        ):
-            raise ValueError(
-                "startup_s must be shorter than the duration of the availability"
-            )
-        return self
 
 
 class SatelliteTypeDoc(Document):

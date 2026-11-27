@@ -5,30 +5,36 @@ schema_version: "1.0.0"
 ground_station:
   name: GS
   antennas:
-    - {rate_gbps: 1.0}   # numero di antenne da confermare
+    - {rate_gbps: 1.0}
 planes:
   - name: P1
+    kind: periodic
+    period_s: 5640
+    duration_s: 300
     nodes:
-      - {name: COM1, type: com}
-      - {name: P1-S1, type: sar}
-      - {name: P1-S2, type: sar}
-      - {name: P1-S3, type: sar}
-      - {name: P1-S4, type: sar}
-      - {name: P1-S5, type: sar}
-      - {name: P1-S6, type: sar}
-      - {name: P1-S7, type: sar}
-      - {name: P1-S8, type: sar}
+      - {name: COM1, type: com, first_start_s: 0}
+      - {name: P1-S1, type: sar, first_start_s: 0}
+      - {name: P1-S2, type: sar, first_start_s: 0}
+      - {name: P1-S3, type: sar, first_start_s: 0}
+      - {name: P1-S4, type: sar, first_start_s: 0}
+      - {name: P1-S5, type: sar, first_start_s: 0}
+      - {name: P1-S6, type: sar, first_start_s: 0}
+      - {name: P1-S7, type: sar, first_start_s: 0}
+      - {name: P1-S8, type: sar, first_start_s: 0}
   - name: P2
+    kind: periodic
+    period_s: 5640
+    duration_s: 300
     nodes:
-      - {name: COM2, type: com}
-      - {name: P2-S1, type: sar}
-      - {name: P2-S2, type: sar}
-      - {name: P2-S3, type: sar}
-      - {name: P2-S4, type: sar}
-      - {name: P2-S5, type: sar}
-      - {name: P2-S6, type: sar}
-      - {name: P2-S7, type: sar}
-      - {name: P2-S8, type: sar}
+      - {name: COM2, type: com, first_start_s: 0}
+      - {name: P2-S1, type: sar, first_start_s: 0}
+      - {name: P2-S2, type: sar, first_start_s: 0}
+      - {name: P2-S3, type: sar, first_start_s: 0}
+      - {name: P2-S4, type: sar, first_start_s: 0}
+      - {name: P2-S5, type: sar, first_start_s: 0}
+      - {name: P2-S6, type: sar, first_start_s: 0}
+      - {name: P2-S7, type: sar, first_start_s: 0}
+      - {name: P2-S8, type: sar, first_start_s: 0}
 links:
   - a: COM1
     b: COM2

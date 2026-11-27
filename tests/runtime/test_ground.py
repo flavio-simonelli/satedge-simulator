@@ -15,8 +15,8 @@ from one_satellite import (
 )
 
 from satedge_simulator.domain.lifecycle import RequestStatus
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.violations import ViolationKind
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.planning.epochs import planning_epochs
 from satedge_simulator.planning.rolling_planner import RollingPlanner
 from satedge_simulator.runtime.ground import GroundRuntime

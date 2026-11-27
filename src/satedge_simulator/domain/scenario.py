@@ -6,10 +6,10 @@ import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import Constellation
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.domain.workload_model import WorkloadModel
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import DomainError
 from satedge_simulator.rng.rngs import DEFAULT_SEED, MODULUS
 
 
@@ -32,15 +32,15 @@ class SimulationSettings:
 
     def __post_init__(self) -> None:
         if not (math.isfinite(self.end_s) and self.end_s > 0):
-            raise ScenarioError(
+            raise DomainError(
                 f"la fine della simulazione deve essere finita e > 0, invece è {self.end_s}"
             )
         if not 0 < self.seed < MODULUS:
-            raise ScenarioError(
+            raise DomainError(
                 f"il seed deve essere compreso tra 1 e {MODULUS - 1}, invece è {self.seed}"
             )
         if not (math.isfinite(self.tolerance_s) and self.tolerance_s >= 0):
-            raise ScenarioError(
+            raise DomainError(
                 f"la tolleranza deve essere finita e >= 0, invece è {self.tolerance_s}"
             )
 
@@ -86,14 +86,15 @@ class Scenario:
 
     def __post_init__(self) -> None:
         for request in self.requests:
-            if not self.constellation.is_satellite(request.origin):
-                raise ScenarioError(
-                    f"richiesta {request.id}: l'origine {request.origin!r} non è un satellite"
+            if not any(request.origin is s for s in self.constellation.satellites):
+                raise DomainError(
+                    f"richiesta {request.id}: l'origine {request.origin.id!r} non è un satellite "
+                    "della costellazione"
                 )
         if self.lead_time_s is not None and not (
             math.isfinite(self.lead_time_s) and self.lead_time_s > 0
         ):
-            raise ScenarioError(
+            raise DomainError(
                 f"l'anticipo del calcolo deve essere finito e > 0, invece è {self.lead_time_s}"
             )
 

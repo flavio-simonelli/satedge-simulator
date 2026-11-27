@@ -8,22 +8,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from satedge_simulator.domain.workload import (
-    DEFAULT_DEADLINE_AFTER_RELEASE_S,
-    Priority,
-    RequestSpec,
-    TaskSpec,
-)
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.topology import Constellation
 from satedge_simulator.domain.workload_model import WorkloadModel
-from satedge_simulator.errors import DocumentError, ScenarioError
+from satedge_simulator.errors import DocumentError, DomainError
 from satedge_simulator.io.workload import (
     RequestDoc,
     StochasticWorkloadDoc,
     WorkloadFile,
 )
+from satedge_simulator.loading.conventions import DEFAULT_DEADLINE_AFTER_RELEASE_S
 
 
-def load_workload(path: str | Path) -> tuple[RequestSpec, ...] | WorkloadModel:
+def load_workload(
+    path: str | Path, constellation: Constellation
+) -> tuple[RequestSpec, ...] | WorkloadModel:
     """Read the workload in ``path``.
 
     An explicit workload gives its requests, with the default deadlines of their priority
@@ -41,16 +40,13 @@ def load_workload(path: str | Path) -> tuple[RequestSpec, ...] | WorkloadModel:
             "a stochastic workload is not connected to the domain model yet"
         )
     try:
-        requests = tuple(_request(doc) for doc in document.requests)
-    except ScenarioError as error:
+        requests = tuple(_request(doc, constellation) for doc in document.requests)
+    except DomainError as error:
         raise DocumentError(f"{path}: {error}") from error
-    ids = [r.id for r in requests]
-    if len(set(ids)) != len(ids):
-        raise DocumentError(f"{path}: duplicate request identifiers")
     return requests
 
 
-def _request(doc: RequestDoc) -> RequestSpec:
+def _request(doc: RequestDoc, constellation: Constellation) -> RequestSpec:
     priority = Priority[doc.priority.name]
     deadline = doc.deadline_s
     if deadline is None:
@@ -59,12 +55,12 @@ def _request(doc: RequestDoc) -> RequestSpec:
         return RequestSpec(
             id=doc.id,
             priority=priority,
-            origin=doc.origin,
+            origin=constellation.satellite(doc.origin),
             arrival_s=doc.release_s if doc.arrival_s is None else doc.arrival_s,
             release_s=doc.release_s,
             deadline_s=deadline,
             raw_size_gb=doc.raw_size_gb,
             tasks=tuple(TaskSpec(t.execution_s, t.output_size_gb) for t in doc.tasks),
         )
-    except ScenarioError as error:
+    except DomainError as error:
         raise DocumentError(f"request {doc.id}: {error}") from error

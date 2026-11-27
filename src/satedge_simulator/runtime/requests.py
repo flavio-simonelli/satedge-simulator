@@ -8,9 +8,9 @@ from typing import Protocol
 import simpy
 
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import NodeId
 from satedge_simulator.domain.violations import Violation
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.errors import StateError
 from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.observe.notifications import (

@@ -9,8 +9,8 @@ import simpy
 
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
 from satedge_simulator.domain.plan import EpochPlan
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.violations import Violation
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.errors import StateError
 from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.observe.notifications import (
@@ -128,8 +128,8 @@ class GroundRuntime:
         record = self._records.get(spec.id)
         if record is not None and record.is_final:
             return  # already rejected or failed: nobody will use the raw data
-        raw = DataKey(spec.id, 0, spec.origin)
-        plmm = self._network.satellite(spec.origin).plmm
+        raw = DataKey(spec.id, 0, spec.origin.id)
+        plmm = self._network.satellite(spec.origin.id).plmm
         if (
             yield from plmm.reserve(self._env, raw, spec.raw_size_gb, self._tolerance_s)
         ):
@@ -155,8 +155,8 @@ class GroundRuntime:
             self._records[request_id].move(RequestStatus.REJECTED, now)
             self._bus.publish(RequestRejected(now, request_id, epoch.index, reason))
             spec = self._specs[request_id]
-            self._network.satellite(spec.origin).plmm.release(
-                DataKey(spec.id, 0, spec.origin)
+            self._network.satellite(spec.origin.id).plmm.release(
+                DataKey(spec.id, 0, spec.origin.id)
             )
         accepted: dict[str, RequestRuntime] = {}
         for request_id in _accepted_ids(decision.plan):

@@ -15,7 +15,7 @@ from satedge_simulator.analysis.autocorrelation import autocorrelation
 from satedge_simulator.analysis.observations import PER_REQUEST, Statistic
 from satedge_simulator.analysis.run import observe
 from satedge_simulator.domain.scenario import Scenario
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.planning.ports import Planner
 from satedge_simulator.rng.rngs import MultiStreamRng
 
@@ -48,10 +48,10 @@ def autocorrelation_study(
     """Run ``scenario`` once and measure the autocorrelation of its per-request statistics.
 
     Raises:
-        ScenarioError: If the largest lag is not positive.
+        InputError: If the largest lag is not positive.
     """
     if max_lag < 1:
-        raise ScenarioError(f"il lag massimo deve essere almeno 1, invece è {max_lag}")
+        raise InputError(f"il lag massimo deve essere almeno 1, invece è {max_lag}")
     run = observe(
         scenario, planner, MultiStreamRng(scenario.settings.seed), lead_time_s
     )

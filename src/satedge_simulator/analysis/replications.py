@@ -23,7 +23,7 @@ from satedge_simulator.analysis.statistics import (
 )
 from satedge_simulator.analysis.welch import welch_moving_average
 from satedge_simulator.domain.scenario import Scenario
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.planning.ports import Planner
 from satedge_simulator.rng.rngs import MultiStreamRng
 
@@ -87,14 +87,12 @@ def replicate(
         lead_time_s: The lead time of the planning, if the scenario does not give it.
 
     Raises:
-        ScenarioError: If there are fewer than 2 replications or the cell is not positive.
+        InputError: If there are fewer than 2 replications or the cell is not positive.
     """
     if replications < 2:
-        raise ScenarioError(f"servono almeno 2 repliche, invece sono {replications}")
+        raise InputError(f"servono almeno 2 repliche, invece sono {replications}")
     if cell_s <= 0:
-        raise ScenarioError(
-            f"la cella del transitorio deve essere > 0, invece è {cell_s}"
-        )
+        raise InputError(f"la cella del transitorio deve essere > 0, invece è {cell_s}")
     end_s = scenario.settings.end_s
     rng = MultiStreamRng(scenario.settings.seed)
     runs = [

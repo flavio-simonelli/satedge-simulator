@@ -13,7 +13,7 @@ from satedge_simulator.analysis.autocorrelation_study import (
 from satedge_simulator.analysis.batch_means import BatchMeansReport, batch_means
 from satedge_simulator.analysis.replications import ReplicationReport, replicate
 from satedge_simulator.domain.scenario import Scenario
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.export.results import build_results
 from satedge_simulator.io.analysis_results import (
     write_autocorrelation,
@@ -65,7 +65,7 @@ def simulate(
     """Run ``scenario`` with any planner behind the port.
 
     Raises:
-        ScenarioError: If neither the scenario nor the caller gives the lead time.
+        InputError: If neither the scenario nor the caller gives the lead time.
         PlanExecutionError: In strict mode, at the first violation of the plan.
     """
     return Simulation(scenario, planner, lead_time_s, bus).run()
@@ -90,7 +90,7 @@ def _prepare(path: str | Path) -> _Prepared:
 
     Raises:
         DocumentError: If a file of the scenario or the solver file is not valid.
-        ScenarioError: If no lead time is given and the solver has no time limit.
+        InputError: If no lead time is given and the solver has no time limit.
     """
     loaded = load_scenario(path)
     scenario = loaded.scenario
@@ -101,7 +101,7 @@ def _prepare(path: str | Path) -> _Prepared:
         else configured.time_limit_s
     )
     if lead is None:
-        raise ScenarioError(
+        raise InputError(
             f"{path}: lo scenario non indica l'anticipo del calcolo e il solver non ha un "
             "limite di tempo"
         )
@@ -118,7 +118,7 @@ def simulate_file(
 
     Raises:
         DocumentError: If a file of the scenario or the solver file is not valid.
-        ScenarioError: If no lead time is given and the solver has no time limit.
+        InputError: If no lead time is given and the solver has no time limit.
         PlanExecutionError: In strict mode, at the first violation of the plan.
     """
     prepared = _prepare(path)

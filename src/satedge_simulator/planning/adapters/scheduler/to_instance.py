@@ -23,6 +23,7 @@ from satedge_workflow_scheduler.domain.solution import Schedule, TaskExecution, 
 
 from satedge_simulator.domain.intervals import WindowSet as SimWindowSet
 from satedge_simulator.domain.plan import PlannedTask, PlannedTransfer
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import (
     AlwaysAvailable as SimAlwaysAvailable,
 )
@@ -37,7 +38,6 @@ from satedge_simulator.domain.topology import (
 from satedge_simulator.domain.topology import (
     WindowedAvailability as SimWindowedAvailability,
 )
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.planning.ports import Commitment, PlanningSnapshot
 
 
@@ -110,14 +110,14 @@ def _availability(
 
 
 def _window_set(windows: SimWindowSet) -> WindowSet:
-    return WindowSet(TimeWindow(w.start, w.end) for w in windows)
+    return WindowSet(TimeWindow(w.start, w.end) for w in windows.windows)
 
 
 def _request(request: RequestSpec) -> Request:
     return Request(
         id=request.id,
         priority=Priority[request.priority.name],
-        origin=request.origin,
+        origin=request.origin.id,
         release=request.release_s,
         deadline=request.deadline_s,
         raw_size=request.raw_size_gb,

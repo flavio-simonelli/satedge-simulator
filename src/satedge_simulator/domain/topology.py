@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from satedge_simulator.domain.intervals import WindowSet
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import DomainError
 
 type NodeId = str
 
@@ -39,7 +39,7 @@ type Availability = AlwaysAvailable | WindowedAvailability
 
 def _require_positive_finite(value: float, what: str) -> None:
     if not (math.isfinite(value) and value > 0):
-        raise ScenarioError(f"{what}: deve essere finito e > 0, invece è {value}")
+        raise DomainError(f"{what}: deve essere finito e > 0, invece è {value}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +60,7 @@ class Satellite:
 
     def __post_init__(self) -> None:
         if not self.id:
-            raise ScenarioError("l'identificativo del satellite non può essere vuoto")
+            raise DomainError("l'identificativo del satellite non può essere vuoto")
         _require_positive_finite(
             self.plmm_capacity_gb, f"{self.id}, capacità della PLMM"
         )
@@ -83,7 +83,7 @@ class GroundStation:
 
     def __post_init__(self) -> None:
         if not self.id:
-            raise ScenarioError(
+            raise DomainError(
                 "l'identificativo della ground station non può essere vuoto"
             )
 
@@ -110,9 +110,7 @@ class Link:
 
     def __post_init__(self) -> None:
         if self.a == self.b:
-            raise ScenarioError(
-                f"il link {self.a}-{self.b} collega un nodo a sé stesso"
-            )
+            raise DomainError(f"il link {self.a}-{self.b} collega un nodo a sé stesso")
         _require_positive_finite(self.capacity_gbps, f"link {self.name}, capacità")
         _require_positive_finite(self.latency_s, f"link {self.name}, latenza")
 
@@ -151,9 +149,9 @@ class Plane:
 
     def __post_init__(self) -> None:
         if not self.satellites:
-            raise ScenarioError(f"il piano {self.id} non ha satelliti")
+            raise DomainError(f"il piano {self.id} non ha satelliti")
         if self.com not in {s.id for s in self.satellites}:
-            raise ScenarioError(
+            raise DomainError(
                 f"piano {self.id}: il COM {self.com!r} non è uno dei suoi satelliti"
             )
 
@@ -205,7 +203,7 @@ class Constellation:
         try:
             return self._satellites[node]
         except KeyError:
-            raise ScenarioError(f"satellite sconosciuto {node!r}") from None
+            raise DomainError(f"satellite sconosciuto {node!r}") from None
 
     def is_satellite(self, node: NodeId) -> bool:
         """Whether ``node`` is a satellite."""
@@ -218,12 +216,12 @@ class Constellation:
     def _check_nodes(self) -> None:
         plane_ids = [p.id for p in self._planes]
         if len(set(plane_ids)) != len(plane_ids):
-            raise ScenarioError(f"identificativi di piano duplicati {plane_ids}")
+            raise DomainError(f"identificativi di piano duplicati {plane_ids}")
         satellite_ids = [s.id for p in self._planes for s in p.satellites]
         if len(set(satellite_ids)) != len(satellite_ids):
-            raise ScenarioError("un identificativo di satellite è usato più volte")
+            raise DomainError("un identificativo di satellite è usato più volte")
         if self._ground.id in self._satellites:
-            raise ScenarioError(
+            raise DomainError(
                 f"l'identificativo della ground station {self._ground.id!r} è anche un satellite"
             )
 
@@ -233,10 +231,10 @@ class Constellation:
         for link in self._links:
             for endpoint in (link.a, link.b):
                 if endpoint not in known:
-                    raise ScenarioError(
+                    raise DomainError(
                         f"link {link.name}: nodo sconosciuto {endpoint!r}"
                     )
             pair = frozenset((link.a, link.b))
             if pair in seen:
-                raise ScenarioError(f"il link {link.name} è dichiarato più volte")
+                raise DomainError(f"il link {link.name} è dichiarato più volte")
             seen.add(pair)

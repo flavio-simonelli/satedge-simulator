@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 
 
 def autocorrelation(series: Sequence[float], max_lag: int) -> tuple[float, ...]:
@@ -14,11 +14,11 @@ def autocorrelation(series: Sequence[float], max_lag: int) -> tuple[float, ...]:
     Leemis and Park. A constant series has no autocorrelation: every ``r_j`` is 0.
 
     Raises:
-        ScenarioError: If the lag is not between 1 and ``n − 1``.
+        InputError: If the lag is not between 1 and ``n − 1``.
     """
     n = len(series)
     if not 1 <= max_lag < n:
-        raise ScenarioError(
+        raise InputError(
             f"il lag massimo deve essere tra 1 e {n - 1}, invece è {max_lag}"
         )
     # A constant series is recognised on its values, not on c_0: the rounding of the mean

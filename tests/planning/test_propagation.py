@@ -14,7 +14,7 @@ from satedge_simulator.domain.topology import (
     Satellite,
     WindowedAvailability,
 )
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.planning.propagation import plan_arrival_times
 
 LATENCY = 0.015
@@ -102,7 +102,7 @@ def test_the_result_has_one_entry_per_satellite_only() -> None:
 
 def test_the_ready_instant_must_be_valid() -> None:
     cons = network([])
-    with pytest.raises(ScenarioError):
+    with pytest.raises(InputError):
         plan_arrival_times(cons, -1.0)
-    with pytest.raises(ScenarioError):
+    with pytest.raises(InputError):
         plan_arrival_times(cons, math.inf)

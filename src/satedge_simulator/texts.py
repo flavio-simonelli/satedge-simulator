@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from satedge_simulator.analysis.observations import Statistic
+from satedge_simulator.domain.requests import Priority
 from satedge_simulator.domain.violations import ViolationKind
-from satedge_simulator.domain.workload import Priority
 
 VIOLATIONS: Mapping[ViolationKind, str] = MappingProxyType(
     {

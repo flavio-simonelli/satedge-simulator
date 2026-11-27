@@ -20,7 +20,7 @@ from __future__ import annotations
 import math
 from typing import Protocol
 
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 
 
 class UniformSource(Protocol):
@@ -140,7 +140,7 @@ def balanced_hyperexponential(mean: float, cv: float) -> tuple[float, float, flo
     ``p = (1 − sqrt((cv² − 1)/(cv² + 1))) / 2``.
 
     Raises:
-        ScenarioError: If the mean is not positive or ``cv <= 1``: a hyperexponential is more
+        InputError: If the mean is not positive or ``cv <= 1``: a hyperexponential is more
             variable than the exponential.
     """
     _require(mean > 0.0, f"iperesponenziale: serve media > 0, invece è {mean}")
@@ -155,4 +155,4 @@ def balanced_hyperexponential(mean: float, cv: float) -> tuple[float, float, flo
 
 def _require(condition: bool, message: str) -> None:
     if not condition:
-        raise ScenarioError(message)
+        raise InputError(message)

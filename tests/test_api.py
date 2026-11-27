@@ -13,7 +13,7 @@ from satedge_simulator.api import (
     simulate_file,
 )
 from satedge_simulator.domain.lifecycle import RequestStatus
-from satedge_simulator.errors import DocumentError, ScenarioError
+from satedge_simulator.errors import DocumentError, InputError
 
 EXAMPLE = Path(__file__).parent.parent / "examples" / "casostudio"
 
@@ -67,7 +67,7 @@ def test_a_scenario_without_lead_time_needs_a_solver_with_a_time_limit(
     scenario.write_text(
         text.replace("lead_time_s: 60", "lead_time_s: null"), encoding="utf-8"
     )
-    with pytest.raises(ScenarioError, match="non indica l'anticipo"):
+    with pytest.raises(InputError, match="non indica l'anticipo"):
         simulate_file(scenario)
 
 

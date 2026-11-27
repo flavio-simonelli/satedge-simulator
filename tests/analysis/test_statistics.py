@@ -7,7 +7,7 @@ import pytest
 from satedge_simulator.analysis.autocorrelation import autocorrelation
 from satedge_simulator.analysis.statistics import Welford, confidence_interval
 from satedge_simulator.analysis.welch import welch_moving_average
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 
 
 def test_welford_matches_the_two_pass_estimates() -> None:
@@ -36,7 +36,7 @@ def test_an_interval_needs_two_values() -> None:
     assert single is not None
     assert single.half_width is None
     assert single.low is None
-    with pytest.raises(ScenarioError, match="livello"):
+    with pytest.raises(InputError, match="livello"):
         confidence_interval([1.0, 2.0], level=1.0)
 
 
@@ -57,7 +57,7 @@ def test_a_constant_series_whose_mean_rounds_has_no_autocorrelation() -> None:
 
 
 def test_the_lag_must_fit_in_the_series() -> None:
-    with pytest.raises(ScenarioError, match="lag"):
+    with pytest.raises(InputError, match="lag"):
         autocorrelation([1.0, 2.0, 3.0], 3)
 
 
@@ -66,5 +66,5 @@ def test_welch_averages_symmetric_windows_that_grow_at_the_start() -> None:
         float(v) for v in range(1, 10)
     ]  # 1 … 9: the moving average of a line is the line
     assert welch_moving_average(series, 2) == (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
-    with pytest.raises(ScenarioError, match="Welch"):
+    with pytest.raises(InputError, match="Welch"):
         welch_moving_average(series, 5)

@@ -5,27 +5,27 @@ import math
 import pytest
 
 from satedge_simulator.domain.plan import EpochPlan, PlannedTask, PlannedTransfer
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import DomainError
 
 
 def test_action_spans_must_be_ordered_and_finite() -> None:
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         PlannedTask("R1", 0, "A", start_s=10.0, end_s=10.0)
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         PlannedTransfer("R1", 0, "A", "B", start_s=-1.0, end_s=5.0)
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         PlannedTask("R1", 0, "A", start_s=0.0, end_s=math.inf)
 
 
 def test_a_task_appears_once() -> None:
     task = PlannedTask("R1", 0, "A", 0.0, 10.0)
     again = PlannedTask("R1", 0, "B", 20.0, 30.0)
-    with pytest.raises(ScenarioError, match="più volte"):
+    with pytest.raises(DomainError, match="più volte"):
         EpochPlan(tasks=(task, again))
 
 
 def test_plan_arrival_must_be_nonnegative_or_infinite() -> None:
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         EpochPlan(plan_arrival_s={"A": -1.0})
     plan = EpochPlan(plan_arrival_s={"A": 5.0, "B": math.inf})
     assert plan.plan_arrival_s["B"] == math.inf

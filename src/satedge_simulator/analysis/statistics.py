@@ -6,7 +6,7 @@ import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.rng.rvms import idf_student
 
 
@@ -81,10 +81,10 @@ def confidence_interval(
         ``None`` for an empty sample.
 
     Raises:
-        ScenarioError: If the level is not between 0 and 1.
+        InputError: If the level is not between 0 and 1.
     """
     if not 0.0 < level < 1.0:
-        raise ScenarioError(
+        raise InputError(
             f"il livello di confidenza deve essere tra 0 e 1, invece è {level}"
         )
     w = Welford()

@@ -23,8 +23,8 @@ from satedge_workflow_scheduler.scheduling.deadline import DeadlineMode
 from satedge_workflow_scheduler.scheduling.feasibility import Constraint, check
 
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import Constellation
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.metrics.as_run import AsRun
 from satedge_simulator.planning.adapters.scheduler.to_instance import (
     execution_of,

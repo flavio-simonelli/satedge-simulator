@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from satedge_simulator.domain.topology import Constellation, NodeId
-from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.topology import Constellation, Satellite
 from satedge_simulator.domain.workload_model import Range, WorkloadModel
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import DomainError
 from satedge_simulator.generation.quantities import Quantity
 from satedge_simulator.generation.stages import StageSplitter
 from satedge_simulator.rng.rngs import MultiStreamRng, Stream
@@ -19,7 +19,7 @@ class RequestGenerator:
     task fits strictly in one computing window.
 
     Raises:
-        ScenarioError: If an origin is not a satellite, or if even the largest number of stages
+        DomainError: If an origin is not a satellite, or if even the largest number of stages
             cannot make every task fit in a window.
     """
 
@@ -99,16 +99,18 @@ class RequestGenerator:
         return uniform(self._stream(quantity), r.low, r.high)
 
 
-def _origins(model: WorkloadModel, constellation: Constellation) -> tuple[NodeId, ...]:
+def _origins(
+    model: WorkloadModel, constellation: Constellation
+) -> tuple[Satellite, ...]:
     """The satellites that acquire: the ones of the model, or every satellite but the COMs.
 
     Raises:
-        ScenarioError: If an origin of the model is not a satellite.
+        DomainError: If an origin of the model is not a satellite.
     """
     if model.origins is None:
         coms = {plane.com for plane in constellation.planes}
-        return tuple(s.id for s in constellation.satellites if s.id not in coms)
+        return tuple(s for s in constellation.satellites if s.id not in coms)
     for node in model.origins:
         if not constellation.is_satellite(node):
-            raise ScenarioError(f"satellite di origine sconosciuto {node!r}")
-    return model.origins
+            raise DomainError(f"satellite di origine sconosciuto {node!r}")
+    return tuple(constellation.satellite(node) for node in model.origins)

@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
-from satedge_simulator.domain.workload import Priority, RequestSpec
+from satedge_simulator.domain.requests import Priority, RequestSpec
 from satedge_simulator.metrics.distribution import Distribution
 
 _DELIVERED = frozenset({RequestStatus.DELIVERED_ON_TIME, RequestStatus.DELIVERED_LATE})

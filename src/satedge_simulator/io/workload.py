@@ -83,15 +83,19 @@ class ExplicitWorkloadDoc(WorkloadDoc):
 
 def _check_float_range(value: tuple[float, float]) -> tuple[float, float]:
     low, high = value
-    if low < 0 or low > high:
-        raise ValueError("a range [low, high] needs 0 <= low <= high")
+    if not low <= high:
+        raise ValueError(
+            f"a range [low, high] needs low <= high, invece è [{low}, {high}]"
+        )
     return value
 
 
 def _check_task_count_range(value: tuple[int, int]) -> tuple[int, int]:
     low, high = value
-    if low < 1 or low > high:
-        raise ValueError("a range of tasks [low, high] needs 1 <= low <= high")
+    if not low <= high:
+        raise ValueError(
+            f"a range of tasks [low, high] needs low <= high, invece è [{low}, {high}]"
+        )
     return value
 
 
@@ -99,6 +103,7 @@ FloatRange = Annotated[tuple[float, float], AfterValidator(_check_float_range)]
 """A range ``[low, high]``: each value is drawn uniformly between the two."""
 
 TaskCountRange = Annotated[tuple[int, int], AfterValidator(_check_task_count_range)]
+"""A range ``[low, high]`` of whole numbers of tasks."""
 """A range ``[low, high]`` of whole numbers of tasks."""
 
 
@@ -135,6 +140,7 @@ class StochasticWorkloadDoc(WorkloadDoc):
     raw_size_gb: FloatRange
     tasks_per_request: TaskCountRange
     task: TaskModelDoc
+    deadline_after_release_s: dict[PriorityName, float] | None = None
 
 
 class WorkloadFile:

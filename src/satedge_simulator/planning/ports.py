@@ -13,8 +13,8 @@ from types import MappingProxyType
 from typing import Protocol
 
 from satedge_simulator.domain.plan import EpochPlan, PlannedTask, PlannedTransfer
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import Constellation, NodeId
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.errors import PlannerError
 from satedge_simulator.planning.epochs import Epoch
 

@@ -12,14 +12,16 @@ Il simulatore distingue due cose:
 ```{mermaid}
 classDiagram
     class SimulatorError
-    class ScenarioError
+    class DomainError
+    class InputError
     class DocumentError
     class PlannerError
     class PlanExecutionError
     class StateError
     class StreamExhaustedError
-    SimulatorError <|-- ScenarioError
-    ScenarioError <|-- DocumentError
+    SimulatorError <|-- DomainError
+    SimulatorError <|-- InputError
+    InputError <|-- DocumentError
     SimulatorError <|-- PlannerError
     SimulatorError <|-- PlanExecutionError
     SimulatorError <|-- StateError
@@ -28,7 +30,8 @@ classDiagram
 
 | Errore | Quando |
 | --- | --- |
-| `ScenarioError` | lo scenario è incoerente: un parametro fuori intervallo, un identificativo duplicato o sconosciuto |
+| `DomainError` | un oggetto del dominio viola una sua invariante: un valore fuori intervallo, un identificativo duplicato o sconosciuto, un'incoerenza tra oggetti |
+| `InputError` | un valore dato dall'esterno non è valido: un argomento di una chiamata, un'impostazione mancante |
 | `DocumentError` | un file non si legge o non rispetta il suo schema; il messaggio nomina il file |
 | `PlannerError` | il pianificatore non produce una decisione usabile; le richieste restano in coda |
 | `PlanExecutionError` | in modalità `strict`, alla prima violazione |

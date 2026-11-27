@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 
 from satedge_simulator.domain.topology import NodeId
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import DomainError
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,10 +83,10 @@ class EpochPlan:
     def __post_init__(self) -> None:
         keys = [(t.request_id, t.task_index) for t in self.tasks]
         if len(set(keys)) != len(keys):
-            raise ScenarioError("un task di una richiesta compare più volte nel piano")
+            raise DomainError("un task di una richiesta compare più volte nel piano")
         for node, arrival in self.plan_arrival_s.items():
             if math.isnan(arrival) or arrival < 0:
-                raise ScenarioError(
+                raise DomainError(
                     f"l'arrivo del piano su {node} deve essere >= 0 o inf, invece è {arrival}"
                 )
         object.__setattr__(
@@ -113,8 +113,8 @@ class EpochPlan:
 
 def _check_span(start: float, end: float, what: str) -> None:
     if not (math.isfinite(start) and math.isfinite(end)):
-        raise ScenarioError(f"{what}: gli istanti devono essere finiti")
+        raise DomainError(f"{what}: gli istanti devono essere finiti")
     if start < 0 or end <= start:
-        raise ScenarioError(
+        raise DomainError(
             f"{what}: serve 0 <= inizio < fine, invece è [{start}, {end}]"
         )

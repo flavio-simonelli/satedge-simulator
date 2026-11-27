@@ -12,7 +12,7 @@ from satedge_simulator.analysis.batch_means import batch_means
 from satedge_simulator.analysis.observations import PER_REQUEST, Statistic
 from satedge_simulator.analysis.replications import ReplicationReport, replicate
 from satedge_simulator.domain.scenario import Scenario
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.io.scenario import load_scenario
 from satedge_simulator.planning.adapters.scheduler.planner import SchedulerPlanner
 
@@ -72,7 +72,7 @@ def test_the_first_replication_is_the_run_planted_from_the_seed() -> None:
 
 def test_replications_need_at_least_two() -> None:
     the_scenario, the_planner = scenario(), planner()
-    with pytest.raises(ScenarioError, match="almeno 2"):
+    with pytest.raises(InputError, match="almeno 2"):
         replicate(
             the_scenario, the_planner, replications=1, cell_s=3600.0, welch_window=1
         )
@@ -93,7 +93,7 @@ def test_batch_means_discard_the_warmup_and_cut_whole_batches() -> None:
 
 def test_the_warmup_must_be_before_the_end() -> None:
     the_scenario, the_planner = scenario(), planner()
-    with pytest.raises(ScenarioError, match="riscaldamento"):
+    with pytest.raises(InputError, match="riscaldamento"):
         batch_means(
             the_scenario,
             the_planner,

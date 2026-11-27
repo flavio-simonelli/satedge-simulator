@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from satedge_simulator.domain.intervals import Window, WindowSet
 from satedge_simulator.domain.plan import EpochPlan, PlannedTask, PlannedTransfer
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
 from satedge_simulator.domain.topology import (
     Constellation,
     GroundStation,
@@ -19,11 +20,12 @@ from satedge_simulator.domain.topology import (
     Satellite,
     WindowedAvailability,
 )
-from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
 from satedge_simulator.errors import PlannerError
 from satedge_simulator.planning.ports import PlanningDecision, PlanningSnapshot
 
 LEAD_TIME_S = 50.0
+
+SAT_A = Satellite("A", 100.0, 1.0, WindowSet([Window(0.0, 2000.0)]))
 
 EPS = 1e-4
 Actions = tuple[tuple[PlannedTask, ...], tuple[PlannedTransfer, ...]]
@@ -71,22 +73,25 @@ class ScriptedPlanner:
 
 
 def request(
-    request_id: str = "R1", arrival_s: float = 10.0, release_s: float = 20.0
+    request_id: str = "R1", arrival_s: float = 10.0, release_s: float | None = None
 ) -> RequestSpec:
+    # The release comes 20 s after the arrival, or at the arrival if that is later; the deadline
+    # is 2000 s, or the release if that is later.
+    release = max(20.0, arrival_s) if release_s is None else release_s
     return RequestSpec(
         id=request_id,
         priority=Priority.URGENT,
-        origin="A",
+        origin=SAT_A,
         arrival_s=arrival_s,
-        release_s=release_s,
-        deadline_s=2000.0,
+        release_s=release,
+        deadline_s=max(2000.0, release),
         raw_size_gb=4.0,
         tasks=(TaskSpec(execution_s=8.0, output_size_gb=1.0),),
     )
 
 
 def constellation() -> Constellation:
-    sat = Satellite("A", 100.0, 1.0, WindowSet([Window(0.0, 2000.0)]))
+    sat = SAT_A
     contacts = WindowedAvailability(
         WindowSet([Window(100.0, 300.0), Window(1000.0, 1200.0)])
     )

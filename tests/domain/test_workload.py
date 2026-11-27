@@ -2,8 +2,12 @@
 
 import pytest
 
-from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.domain.intervals import WindowSet
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.topology import Satellite
+from satedge_simulator.errors import DomainError
+
+SAT = Satellite("P1-S3", 100.0, 1.0, WindowSet())
 
 
 def request(
@@ -16,7 +20,7 @@ def request(
     return RequestSpec(
         id=request_id,
         priority=Priority.URGENT,
-        origin="P1-S3",
+        origin=SAT,
         arrival_s=0.0,
         release_s=release_s,
         deadline_s=deadline_s,
@@ -45,22 +49,43 @@ def test_faster_hpc_link_shortens_only_the_io() -> None:
 
 
 def test_pipeline_must_have_a_task() -> None:
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         request(tasks=())
 
 
 def test_deadline_cannot_precede_the_release() -> None:
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         request(release_s=100.0, deadline_s=50.0)
 
 
 def test_task_values_must_be_positive() -> None:
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         TaskSpec(0.0, 1.0)
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         TaskSpec(10.0, -1.0)
 
 
 def test_request_id_must_not_be_empty() -> None:
-    with pytest.raises(ScenarioError):
+    with pytest.raises(DomainError):
         request(request_id="")
+
+
+def test_arrival_cannot_follow_the_release() -> None:
+    with pytest.raises(DomainError):
+        RequestSpec(
+            id="R1",
+            priority=Priority.URGENT,
+            origin=SAT,
+            arrival_s=200.0,
+            release_s=100.0,
+            deadline_s=7200.0,
+            raw_size_gb=8.0,
+            tasks=(TaskSpec(120.0, 0.5),),
+        )
+
+
+def test_requests_with_the_same_id_are_distinct() -> None:
+    first, second = request(), request()
+    assert first.id == second.id
+    assert first != second
+    assert len({first, second}) == 2

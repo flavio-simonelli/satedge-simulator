@@ -19,7 +19,7 @@ from satedge_simulator.domain.topology import (
     NodeId,
     WindowedAvailability,
 )
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 
 
 def plan_arrival_times(
@@ -36,10 +36,10 @@ def plan_arrival_times(
         maps to ``math.inf``.
 
     Raises:
-        ScenarioError: If ``ready_at_s`` is not finite and non-negative.
+        InputError: If ``ready_at_s`` is not finite and non-negative.
     """
     if not (math.isfinite(ready_at_s) and ready_at_s >= 0):
-        raise ScenarioError(
+        raise InputError(
             f"l'istante in cui il piano è pronto deve essere finito e >= 0, invece è {ready_at_s}"
         )
     ground = constellation.ground_station.id

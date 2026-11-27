@@ -6,6 +6,7 @@ import pytest
 
 from satedge_simulator.domain.intervals import Window, WindowSet
 from satedge_simulator.domain.plan import EpochPlan, PlannedTask
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
 from satedge_simulator.domain.topology import (
     Constellation,
     GroundStation,
@@ -14,7 +15,6 @@ from satedge_simulator.domain.topology import (
     Satellite,
     WindowedAvailability,
 )
-from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
 from satedge_simulator.errors import PlannerError, StateError
 from satedge_simulator.planning.epochs import Epoch
 from satedge_simulator.planning.ports import PlanningDecision, PlanningSnapshot
@@ -52,11 +52,14 @@ class ScriptedPlanner:
         return PlanningDecision(plan=EpochPlan(tasks=tasks), rejected=rejected)
 
 
+SAT_A = Satellite("A", 100.0, 1.0, WindowSet())
+
+
 def request(request_id: str, release_s: float = 0.0) -> RequestSpec:
     return RequestSpec(
         id=request_id,
         priority=Priority.URGENT,
-        origin="A",
+        origin=SAT_A,
         arrival_s=release_s,
         release_s=release_s,
         deadline_s=10_000.0,

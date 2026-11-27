@@ -10,8 +10,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import replace
 
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import Constellation
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.errors import PlannerError, StateError
 from satedge_simulator.planning.epochs import Epoch
 from satedge_simulator.planning.ports import (

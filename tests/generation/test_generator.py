@@ -7,16 +7,19 @@ from pathlib import Path
 
 import pytest
 
+from satedge_simulator.domain.requests import Priority, RequestSpec
 from satedge_simulator.domain.topology import Constellation
-from satedge_simulator.domain.workload import Priority, RequestSpec
 from satedge_simulator.domain.workload_model import Range, WorkloadModel
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import DomainError
 from satedge_simulator.generation.generator import RequestGenerator
 from satedge_simulator.io.scenario import load_scenario
 from satedge_simulator.rng.rngs import MultiStreamRng
 
 EXAMPLE = Path(__file__).parents[2] / "examples" / "casostudio" / "scenario.yaml"
-MODEL = WorkloadModel(arrivals_per_hour=4.0)
+MODEL = WorkloadModel(
+    arrivals_per_hour=4.0,
+    deadline_after_release_s={Priority.URGENT: 7200.0, Priority.NON_URGENT: 25200.0},
+)
 
 
 @cache
@@ -74,7 +77,7 @@ def test_parameters_that_cannot_fit_in_a_window_are_rejected() -> None:
         work_s_per_gb=Range(24.0, 24.0),
     )
     the_constellation, rng = constellation(), MultiStreamRng(1)
-    with pytest.raises(ScenarioError, match="finestra di calcolo"):
+    with pytest.raises(DomainError, match="finestra di calcolo"):
         RequestGenerator(heavy, the_constellation, rng)
 
 
@@ -85,7 +88,7 @@ def test_the_quantities_stay_in_their_ranges() -> None:
         assert 2.0 <= r.raw_size_gb <= 12.0
         assert 1 <= len(r.tasks) <= 3
         assert 0.0001 <= r.output_size_gb <= 0.001
-        assert r.origin not in coms
+        assert r.origin.id not in coms
         delay = {Priority.URGENT: 7200.0, Priority.NON_URGENT: 25200.0}[r.priority]
         assert r.deadline_s == pytest.approx(r.release_s + delay)
         work = sum(t.execution_s for t in r.tasks) / r.raw_size_gb
@@ -119,5 +122,5 @@ def test_each_quantity_has_its_own_stream() -> None:
 def test_an_unknown_origin_is_rejected() -> None:
     ghost = replace(MODEL, origins=("GHOST",))
     the_constellation, rng = constellation(), MultiStreamRng(1)
-    with pytest.raises(ScenarioError, match="GHOST"):
+    with pytest.raises(DomainError, match="GHOST"):
         RequestGenerator(ghost, the_constellation, rng)

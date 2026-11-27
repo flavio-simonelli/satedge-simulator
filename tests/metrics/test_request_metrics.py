@@ -1,16 +1,20 @@
 """Tests of the indicators of the requests, from hand-made records."""
 
+from satedge_simulator.domain.intervals import WindowSet
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
-from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.topology import Satellite
 from satedge_simulator.metrics.distribution import Distribution
 from satedge_simulator.metrics.requests import request_metrics
+
+SAT_A = Satellite("A", 100.0, 1.0, WindowSet())
 
 
 def spec(request_id: str, priority: Priority = Priority.URGENT) -> RequestSpec:
     return RequestSpec(
         id=request_id,
         priority=priority,
-        origin="A",
+        origin=SAT_A,
         arrival_s=10.0,
         release_s=20.0,
         deadline_s=100.0,

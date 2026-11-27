@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass
 
 from satedge_simulator.domain.topology import Constellation, WindowedAvailability
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,7 +56,7 @@ def planning_epochs(
     ready in time.
 
     Raises:
-        ScenarioError: If the lead time or the end is not finite and positive.
+        InputError: If the lead time or the end is not finite and positive.
     """
     _require_positive_finite(lead_time_s, "anticipo del calcolo")
     _require_positive_finite(end_s, "fine della simulazione")
@@ -73,4 +73,4 @@ def planning_epochs(
 
 def _require_positive_finite(value: float, what: str) -> None:
     if not (math.isfinite(value) and value > 0):
-        raise ScenarioError(f"{what}: deve essere finito e > 0, invece è {value}")
+        raise InputError(f"{what}: deve essere finito e > 0, invece è {value}")

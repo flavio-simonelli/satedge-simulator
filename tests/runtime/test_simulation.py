@@ -5,10 +5,10 @@ from one_satellite import LEAD_TIME_S, ScriptedPlanner, actions, constellation, 
 
 from satedge_simulator.domain.lifecycle import RequestStatus
 from satedge_simulator.domain.plan import PlannedTask
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.scenario import Scenario, SimulationSettings
 from satedge_simulator.domain.violations import ViolationKind
-from satedge_simulator.domain.workload import RequestSpec
-from satedge_simulator.errors import PlanExecutionError, ScenarioError, StateError
+from satedge_simulator.errors import InputError, PlanExecutionError, StateError
 from satedge_simulator.runtime.simulation import Simulation
 
 
@@ -89,7 +89,7 @@ def test_the_lead_time_of_the_caller_wins_over_the_scenario() -> None:
 def test_the_lead_time_is_required() -> None:
     without_lead_time = scenario(request(), lead_time_s=None)
     planner = ScriptedPlanner()
-    with pytest.raises(ScenarioError, match="anticipo"):
+    with pytest.raises(InputError, match="anticipo"):
         Simulation(without_lead_time, planner)
 
 

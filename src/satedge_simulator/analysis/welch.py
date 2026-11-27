@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 
 
 def welch_moving_average(series: Sequence[float], window: int) -> tuple[float, ...]:
@@ -16,11 +16,11 @@ def welch_moving_average(series: Sequence[float], window: int) -> tuple[float, .
     average has ``len(series) − window`` points.
 
     Raises:
-        ScenarioError: If the window is not between 1 and half the series.
+        InputError: If the window is not between 1 and half the series.
     """
     n = len(series)
     if not 1 <= window <= (n - 1) // 2:
-        raise ScenarioError(
+        raise InputError(
             f"la finestra di Welch deve essere tra 1 e {(n - 1) // 2}, invece è {window}"
         )
     averages = []

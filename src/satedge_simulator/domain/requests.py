@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from types import MappingProxyType
 
-from satedge_simulator.domain.topology import NodeId
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.domain.topology import Satellite
+from satedge_simulator.errors import DomainError
 
 
 class Priority(StrEnum):
@@ -19,18 +17,14 @@ class Priority(StrEnum):
     NON_URGENT = "non_urgent"
 
 
-DEFAULT_DEADLINE_AFTER_RELEASE_S: Mapping[Priority, float] = MappingProxyType(
-    {Priority.URGENT: 7200.0, Priority.NON_URGENT: 25200.0}
-)
-"""Delay after the release within which each class must be delivered, by default: 2 hours for
-the urgent requests, 7 hours, the middle of 6 to 8, for the others."""
-
-
-def _require_finite_at_least(value: float, minimum: float, what: str) -> None:
-    if not (math.isfinite(value) and value >= minimum):
-        raise ScenarioError(
-            f"{what}: deve essere finito e >= {minimum}, invece è {value}"
-        )
+def _require_finite_and_greater(
+    value: float, minimum: float, what: str, *, strict: bool = False
+) -> None:
+    """Check that ``value`` is finite and not below ``minimum``, or above it if ``strict``."""
+    ok = value > minimum if strict else value >= minimum
+    if not (math.isfinite(value) and ok):
+        bound = "> " if strict else ">= "
+        raise DomainError(f"{what}: must be finite and {bound}{minimum}, got {value}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,34 +41,38 @@ class TaskSpec:
     output_size_gb: float
 
     def __post_init__(self) -> None:
-        if not (math.isfinite(self.execution_s) and self.execution_s > 0):
-            raise ScenarioError(
-                f"il tempo di esecuzione del task deve essere finito e > 0, invece è {self.execution_s}"
-            )
-        if not (math.isfinite(self.output_size_gb) and self.output_size_gb > 0):
-            raise ScenarioError(
-                f"la dimensione dell'output del task deve essere finita e > 0, invece è {self.output_size_gb}"
-            )
+        _require_finite_and_greater(
+            self.execution_s, 0.0, "the execution time of the task", strict=True
+        )
+        _require_finite_and_greater(
+            self.output_size_gb, 0.0, "the output size of the task", strict=True
+        )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class RequestSpec:
     """A request: a pipeline whose final output must reach the ground station.
 
+    A request is identified by its instance, not by its ``id``: two requests may share the same
+    ``id``, and equality and hashing are those of the object itself.
+
     Attributes:
-        id: Unique identifier.
+        id: Descriptive label, for people reading the results. It is not unique.
         priority: Priority class.
-        origin: Satellite that holds the raw data.
+        origin: The satellite of the constellation that holds the raw data: this instance, not
+            a copy of it.
         arrival_s: Instant the request reaches the ground segment, in seconds.
-        release_s: Instant the raw data becomes available on ``origin``, in seconds.
+        release_s: Instant the raw data becomes available on ``origin``, in seconds. Not before
+            ``arrival_s``.
         deadline_s: Absolute instant by which the final output must reach the ground station.
+            Not before ``release_s``.
         raw_size_gb: Size of the raw data, in Gb.
         tasks: The pipeline, in execution order.
     """
 
     id: str
     priority: Priority
-    origin: NodeId
+    origin: Satellite
     arrival_s: float
     release_s: float
     deadline_s: float
@@ -82,21 +80,24 @@ class RequestSpec:
     tasks: tuple[TaskSpec, ...]
 
     def __post_init__(self) -> None:
+        if not isinstance(self.origin, Satellite):
+            raise DomainError("the origin of a request must be a satellite")
         if not self.id:
-            raise ScenarioError("l'identificativo della richiesta non può essere vuoto")
+            raise DomainError("the request identifier must not be empty")
         if not self.tasks:
-            raise ScenarioError(
-                f"richiesta {self.id}: la pipeline deve avere almeno un task"
+            raise DomainError(
+                f"request {self.id}: the pipeline must have at least one task"
             )
-        _require_finite_at_least(self.arrival_s, 0.0, f"richiesta {self.id}, arrivo")
-        _require_finite_at_least(self.release_s, 0.0, f"richiesta {self.id}, rilascio")
-        _require_finite_at_least(
-            self.deadline_s, self.release_s, f"richiesta {self.id}, scadenza"
+        _require_finite_and_greater(self.arrival_s, 0.0, f"request {self.id}, arrival")
+        _require_finite_and_greater(
+            self.release_s, self.arrival_s, f"request {self.id}, release"
         )
-        if not (math.isfinite(self.raw_size_gb) and self.raw_size_gb > 0):
-            raise ScenarioError(
-                f"richiesta {self.id}: la dimensione del raw deve essere finita e > 0"
-            )
+        _require_finite_and_greater(
+            self.deadline_s, self.release_s, f"request {self.id}, deadline"
+        )
+        _require_finite_and_greater(
+            self.raw_size_gb, 0.0, f"request {self.id}, raw data size", strict=True
+        )
 
     @property
     def output_size_gb(self) -> float:

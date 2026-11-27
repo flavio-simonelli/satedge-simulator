@@ -1,15 +1,8 @@
 # Tipi di satellite del caso studio: COM, SAR e VHR. I valori presi da topology.yaml sono quelli
 # del caso di studio. Le antenne elencano il tipo di link che servono e la velocità.
 #
-# La disponibilità dell'HPC si scrive come quella dei link (kind: always, periodic o windows):
-#   kind: periodic   -> first_start_s (facoltativo, 0), period_s, duration_s
-#   kind: windows    -> windows: [{start_s, end_s}, ...]
-# startup_s è il tempo di avvio dei container all'inizio di ogni disponibilità.
-#
-# Esempio con la forma esplicita, con le stesse prime due finestre del caso periodico:
-#   availability:
-#     kind: windows
-#     windows: [{start_s: 0, end_s: 300}, {start_s: 5640, end_s: 5940}]
+# Quando è disponibile l'HPC è scritto nel piano, in topology.yaml, con il tempo di avvio di
+# ciascun satellite (o le sue finestre, se il piano le elenca).
 schema_version: "1.0.0"
 satellite_types:
   com:
@@ -19,11 +12,6 @@ satellite_types:
     hpc:
       rate_gbps: 1.0
       memory_gb: 2000           # uguale alla capacità della PLMM
-      startup_s: 0
-      availability:
-        kind: periodic
-        period_s: 5640
-        duration_s: 300
     antennas:
       - link: intra_orbit       # collegamento con il satellite successivo del piano
         rate_gbps: 1.0
@@ -40,11 +28,6 @@ satellite_types:
     hpc:
       rate_gbps: 1.0
       memory_gb: 2000           # uguale alla capacità della PLMM
-      startup_s: 0
-      availability:
-        kind: periodic
-        period_s: 5640
-        duration_s: 300
     antennas:
       - link: intra_orbit
         rate_gbps: 1.0
@@ -57,11 +40,6 @@ satellite_types:
     hpc:
       rate_gbps: 1.0
       memory_gb: 4000           # uguale alla capacità della PLMM
-      startup_s: 0
-      availability:
-        kind: periodic
-        period_s: 5640
-        duration_s: 300
     antennas:
       - link: intra_orbit
         rate_gbps: 1.0

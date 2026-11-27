@@ -14,7 +14,7 @@ from satedge_simulator.domain.topology import (
     Satellite,
     WindowedAvailability,
 )
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.planning.epochs import contact_openings, planning_epochs
 
 
@@ -68,7 +68,7 @@ def test_epochs_starting_at_or_after_the_end_are_not_generated() -> None:
 
 def test_lead_time_and_end_must_be_positive() -> None:
     cons = constellation([(300.0, 400.0)], [])
-    with pytest.raises(ScenarioError):
+    with pytest.raises(InputError):
         planning_epochs(cons, lead_time_s=0.0, end_s=10.0)
-    with pytest.raises(ScenarioError):
+    with pytest.raises(InputError):
         planning_epochs(cons, lead_time_s=10.0, end_s=math.inf)

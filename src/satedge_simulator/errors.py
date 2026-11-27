@@ -10,12 +10,17 @@ class SimulatorError(Exception):
     """Base of every exception raised by the simulator."""
 
 
-class ScenarioError(SimulatorError):
-    """The scenario is inconsistent: invalid parameters, duplicate or unknown identifiers."""
+class DomainError(SimulatorError):
+    """An object of the domain breaks one of its invariants: a value out of range, an unknown
+    or duplicate identifier, an inconsistent combination of objects."""
 
 
-class DocumentError(ScenarioError):
-    """A scenario file cannot be read or is not valid."""
+class InputError(SimulatorError):
+    """A value given from outside is not valid: an argument of a call, or a setting."""
+
+
+class DocumentError(InputError):
+    """A file cannot be read or is not valid. The message names the file."""
 
 
 class PlannerError(SimulatorError):

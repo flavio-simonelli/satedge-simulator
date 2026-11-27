@@ -4,9 +4,30 @@ from pathlib import Path
 
 import pytest
 
-from satedge_simulator.domain.workload import Priority
+from satedge_simulator.domain.intervals import WindowSet
+from satedge_simulator.domain.requests import Priority
+from satedge_simulator.domain.topology import (
+    AlwaysAvailable,
+    Constellation,
+    GroundStation,
+    Link,
+    Plane,
+    Satellite,
+)
 from satedge_simulator.errors import DocumentError
 from satedge_simulator.loading.workload import load_workload
+
+
+def constellation() -> Constellation:
+    """The satellites the workload file names: every origin of the file is one of them."""
+    sats = tuple(
+        Satellite(name, 100.0, 1.0, WindowSet()) for name in ("P1-S3", "P2-S5")
+    )
+    return Constellation(
+        [Plane(1, (sats[0],), com="P1-S3"), Plane(2, (sats[1],), com="P2-S5")],
+        GroundStation("GS"),
+        [Link("P1-S3", "GS", 1.0, 0.015, AlwaysAvailable())],
+    )
 
 
 def write(tmp_path: Path, text: str) -> Path:
@@ -38,7 +59,7 @@ requests:
 
 
 def test_workload_defaults_deadline_from_the_class(tmp_path: Path) -> None:
-    requests = load_workload(write(tmp_path, WORKLOAD))
+    requests = load_workload(write(tmp_path, WORKLOAD), constellation())
     urgent, non_urgent = requests
     assert urgent.deadline_s == 7200.0
     assert urgent.arrival_s == 0.0
@@ -47,14 +68,22 @@ def test_workload_defaults_deadline_from_the_class(tmp_path: Path) -> None:
     assert non_urgent.arrival_s == 250.0
 
 
-def test_workload_rejects_duplicate_identifiers(tmp_path: Path) -> None:
+def test_workload_accepts_repeated_identifiers(tmp_path: Path) -> None:
     doc = WORKLOAD.replace("id: R2", "id: R1")
     path = write(tmp_path, doc)
-    with pytest.raises(DocumentError, match="duplicate"):
-        load_workload(path)
+    requests = load_workload(path, constellation())
+    assert [r.id for r in requests] == ["R1", "R1"]
+    assert requests[0] is not requests[1]
+
+
+def test_workload_rejects_arrival_after_release(tmp_path: Path) -> None:
+    doc = WORKLOAD.replace("arrival_s: 250", "arrival_s: 99999")
+    path = write(tmp_path, doc)
+    with pytest.raises(DocumentError, match="release"):
+        load_workload(path, constellation())
 
 
 def test_workload_rejects_unknown_priority(tmp_path: Path) -> None:
     path = write(tmp_path, WORKLOAD.replace("urgent", "soon", 1))
     with pytest.raises(DocumentError):
-        load_workload(path)
+        load_workload(path, constellation())

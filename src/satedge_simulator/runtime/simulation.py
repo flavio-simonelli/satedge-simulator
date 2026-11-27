@@ -9,10 +9,10 @@ from types import MappingProxyType
 import simpy
 
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.scenario import Scenario
 from satedge_simulator.domain.violations import Violation
-from satedge_simulator.domain.workload import RequestSpec
-from satedge_simulator.errors import PlanExecutionError, ScenarioError, StateError
+from satedge_simulator.errors import InputError, PlanExecutionError, StateError
 from satedge_simulator.generation.generator import RequestGenerator
 from satedge_simulator.metrics.as_run import AsRun, AsRunCollector
 from satedge_simulator.metrics.epochs import EpochCollector
@@ -77,7 +77,7 @@ class Simulation:
             where the previous stopped and no number is used twice.
 
     Raises:
-        ScenarioError: If neither the scenario nor the caller gives the lead time.
+        InputError: If neither the scenario nor the caller gives the lead time.
     """
 
     def __init__(
@@ -90,7 +90,7 @@ class Simulation:
     ) -> None:
         lead = lead_time_s if lead_time_s is not None else scenario.lead_time_s
         if lead is None:
-            raise ScenarioError(
+            raise InputError(
                 "lo scenario non indica l'anticipo del calcolo del planner"
             )
         self._scenario = scenario

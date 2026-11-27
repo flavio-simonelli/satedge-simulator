@@ -15,6 +15,7 @@ import simpy
 from satedge_simulator.domain.intervals import Window, WindowSet
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
 from satedge_simulator.domain.plan import PlannedTask, PlannedTransfer
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
 from satedge_simulator.domain.topology import (
     AlwaysAvailable,
     Availability,
@@ -23,7 +24,6 @@ from satedge_simulator.domain.topology import (
     WindowedAvailability,
 )
 from satedge_simulator.domain.violations import ViolationKind
-from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
 from satedge_simulator.errors import StateError
 from satedge_simulator.runtime.ledger import DataKey, DataLedger
 from satedge_simulator.runtime.links import LinkRuntime
@@ -39,12 +39,14 @@ DOWNLINK = PlannedTransfer("R1", 1, "A", "GS", start_s=30.0, end_s=31.0)
 RAW = DataKey("R1", 0, "A")
 OUTPUT = DataKey("R1", 1, "A")
 
+SAT_A = Satellite("A", 100.0, 1.0, WindowSet())
+
 
 def request(deadline_s: float = 100.0) -> RequestSpec:
     return RequestSpec(
         id="R1",
         priority=Priority.URGENT,
-        origin="A",
+        origin=SAT_A,
         arrival_s=0.0,
         release_s=0.0,
         deadline_s=deadline_s,

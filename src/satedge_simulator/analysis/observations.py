@@ -26,8 +26,8 @@ from types import MappingProxyType
 
 from satedge_simulator.domain.intervals import Window
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.topology import Constellation, NodeId
-from satedge_simulator.domain.workload import RequestSpec
 from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.observe.notifications import PlmmChanged, TaskEnded, TaskStarted
 

@@ -9,9 +9,10 @@ from satedge_simulator.analysis.observations import (
     TimeSeriesCollector,
     _per_request,
 )
-from satedge_simulator.domain.intervals import Window
+from satedge_simulator.domain.intervals import Window, WindowSet
 from satedge_simulator.domain.lifecycle import RequestRecord, RequestStatus
-from satedge_simulator.domain.workload import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.requests import Priority, RequestSpec, TaskSpec
+from satedge_simulator.domain.topology import Satellite
 from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.observe.notifications import PlmmChanged, TaskEnded, TaskStarted
 
@@ -75,7 +76,14 @@ def record(*moves: tuple[float, RequestStatus]) -> RequestRecord:
 
 def test_the_records_give_the_per_request_observations() -> None:
     spec = RequestSpec(
-        "R1", Priority.URGENT, "A", 10.0, 20.0, 1000.0, 1.0, (TaskSpec(1.0, 1.0),)
+        "R1",
+        Priority.URGENT,
+        Satellite("A", 100.0, 1.0, WindowSet()),
+        10.0,
+        20.0,
+        1000.0,
+        1.0,
+        (TaskSpec(1.0, 1.0),),
     )
     delivered = _per_request(
         {

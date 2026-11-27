@@ -26,7 +26,7 @@ from satedge_simulator.analysis.statistics import (
     confidence_interval,
 )
 from satedge_simulator.domain.scenario import Scenario
-from satedge_simulator.errors import ScenarioError
+from satedge_simulator.errors import InputError
 from satedge_simulator.planning.ports import Planner
 from satedge_simulator.rng.rngs import MultiStreamRng
 
@@ -79,15 +79,15 @@ def batch_means(
     """Run ``scenario`` once, to its end, and estimate each statistic by batch means.
 
     Raises:
-        ScenarioError: If the warm-up is not before the end, or a batch is empty.
+        InputError: If the warm-up is not before the end, or a batch is empty.
     """
     end_s = scenario.settings.end_s
     if not 0.0 <= warmup_s < end_s:
-        raise ScenarioError(
+        raise InputError(
             f"il riscaldamento deve essere tra 0 e la fine della simulazione, invece è {warmup_s}"
         )
     if batch_size < 1 or batch_duration_s <= 0:
-        raise ScenarioError("la dimensione e la durata dei batch devono essere > 0")
+        raise InputError("la dimensione e la durata dei batch devono essere > 0")
     run = observe(
         scenario, planner, MultiStreamRng(scenario.settings.seed), lead_time_s
     )

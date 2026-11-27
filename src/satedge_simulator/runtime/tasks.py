@@ -7,8 +7,8 @@ from collections.abc import Callable, Generator
 import simpy
 
 from satedge_simulator.domain.plan import PlannedTask
+from satedge_simulator.domain.requests import TaskSpec
 from satedge_simulator.domain.violations import Violation, ViolationKind
-from satedge_simulator.domain.workload import TaskSpec
 from satedge_simulator.observe.notifications import TaskEnded, TaskStarted
 from satedge_simulator.runtime.ledger import DataKey, DataLedger
 from satedge_simulator.runtime.satellite import SatelliteRuntime
