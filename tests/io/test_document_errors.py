@@ -1,4 +1,4 @@
-"""Tests of the messages of the errors in the input files, which the user reads in Italian."""
+"""Tests of the messages of the errors in the input files."""
 
 from pathlib import Path
 
@@ -20,10 +20,10 @@ def test_validation_errors_are_described_field_by_field(tmp_path: Path) -> None:
     with pytest.raises(DocumentError) as raised:
         read_document(path, Sample)
     assert str(raised.value).splitlines() == [
-        f"{path}: il documento non è valido:",
-        "  name: campo obbligatorio mancante",
-        "  size: deve essere maggiore di 0.0",
-        "  extra: campo non previsto",
+        f"{path}: the document is not valid:",
+        "  name: Field required",
+        "  size: Input should be greater than 0",
+        "  extra: Extra inputs are not permitted",
     ]
 
 
@@ -32,5 +32,5 @@ def test_a_missing_file_says_so(tmp_path: Path) -> None:
     with pytest.raises(DocumentError) as raised:
         read_document(path, Sample)
     assert (
-        str(raised.value) == f"{path}: impossibile leggere il file (il file non esiste)"
+        str(raised.value) == f"{path}: cannot read the file (the file does not exist)"
     )

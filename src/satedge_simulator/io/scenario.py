@@ -81,8 +81,8 @@ def load_scenario(path: str | Path) -> LoadedScenario:
     base = Path(path).parent
     if document.workload is None and document.workload_model is None:
         raise DocumentError(
-            f"{path}: serve un carico, nel file indicato da 'workload' o nel modello "
-            "'workload_model'"
+            f"{path}: a workload is needed, in the file named by 'workload' "
+            "or in the model 'workload_model'"
         )
     requests = (
         load_workload(base / document.workload) if document.workload is not None else ()
@@ -103,7 +103,7 @@ def load_scenario(path: str | Path) -> LoadedScenario:
     solver_path = base / document.planner.solver
     if not solver_path.is_file():
         raise DocumentError(
-            f"{path}: il file del solver {document.planner.solver!r} non esiste"
+            f"{path}: the solver file {document.planner.solver!r} does not exist"
         )
     try:
         scenario = Scenario(

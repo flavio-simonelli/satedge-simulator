@@ -30,7 +30,7 @@ def test_a_scenario_needs_a_workload(tmp_path: Path) -> None:
     (tmp_path / "scenario.yaml").write_text(
         text.replace("workload: workload.yaml\n", ""), encoding="utf-8"
     )
-    with pytest.raises(DocumentError, match="serve un carico"):
+    with pytest.raises(DocumentError, match="a workload is needed"):
         load_scenario(tmp_path / "scenario.yaml")
 
 

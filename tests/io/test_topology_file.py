@@ -74,7 +74,7 @@ def test_unsupported_kind_is_an_explicit_error(tmp_path: Path) -> None:
     text = VALID.replace("kind: ring_constellation", "kind: explicit")
     path, plan = write(tmp_path, text), contact_plan()
     with pytest.raises(
-        DocumentError, match="tipo di topologia non supportato 'explicit'"
+        DocumentError, match="unsupported topology kind 'explicit'"
     ) as info:
         load_topology(path, plan)
     assert "ring_constellation" in str(info.value)
@@ -144,5 +144,5 @@ def test_without_a_horizon_the_windows_go_to_the_end_of_the_simulation(
 
 def test_a_horizon_shorter_than_the_simulation_is_an_error(tmp_path: Path) -> None:
     path, plan = write(tmp_path, VALID), contact_plan()
-    with pytest.raises(DocumentError, match="finestre di calcolo fino a"):
+    with pytest.raises(DocumentError, match="computing windows up to"):
         load_topology(path, plan, horizon_s=1e9)

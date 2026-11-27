@@ -18,10 +18,10 @@ class ContactPlan:
         self._windows: dict[frozenset[NodeId], WindowSet] = {}
         for (a, b), window_set in windows.items():
             if a == b:
-                raise ScenarioError(f"contact plan: {a} è in contatto con sé stesso")
+                raise ScenarioError(f"contact plan: {a} is in contact with itself")
             pair = frozenset((a, b))
             if pair in self._windows:
-                raise ScenarioError(f"contact plan: {a}-{b} è dichiarato più volte")
+                raise ScenarioError(f"contact plan: {a}-{b} is declared more than once")
             self._windows[pair] = window_set
 
     def windows_of(self, a: NodeId, b: NodeId) -> WindowSet:
@@ -30,5 +30,5 @@ class ContactPlan:
             return self._windows[frozenset((a, b))]
         except KeyError:
             raise ScenarioError(
-                f"il contact plan non ha finestre per {a}-{b}"
+                f"the contact plan has no windows for {a}-{b}"
             ) from None

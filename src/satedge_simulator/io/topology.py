@@ -130,7 +130,7 @@ def load_topology(
         return _load_ring(path, contact_plan, horizon_s)
     supported = ", ".join(kind.value for kind in TopologyKind)
     raise DocumentError(
-        f"{path}: tipo di topologia non supportato {header.kind!r}, supportati: {supported}"
+        f"{path}: unsupported topology kind {header.kind!r}, supported: {supported}"
     )
 
 
@@ -141,12 +141,12 @@ def _load_ring(
     horizon = document.horizon_s if document.horizon_s is not None else horizon_s
     if horizon is None:
         raise DocumentError(
-            f"{path}: serve l'orizzonte 'horizon_s' delle finestre di calcolo"
+            f"{path}: the 'horizon_s' of the computing windows is needed"
         )
     if horizon_s is not None and horizon < horizon_s:
         raise DocumentError(
-            f"{path}: la topologia genera le finestre di calcolo fino a {horizon:g} s, ma la "
-            f"simulazione dura fino a {horizon_s:g} s"
+            f"{path}: the topology generates computing windows up to {horizon:g} s, but the "
+            f"simulation runs up to {horizon_s:g} s"
         )
     try:
         return RingConstellationBuilder(document.to_spec(horizon), contact_plan).build()

@@ -44,8 +44,8 @@ class HpcSchedule:
     def __post_init__(self) -> None:
         if not 0 < self.duration_s - self.startup_s <= self.period_s:
             raise ScenarioError(
-                "la finestra dell'HPC (durata meno avvio) deve essere positiva e non più lunga "
-                "del periodo"
+                "the HPC window (duration minus start-up) must be positive and no longer than "
+                "the period"
             )
 
     @property
@@ -102,16 +102,16 @@ class RingSpec:
     def __post_init__(self) -> None:
         if self.planes < 1 or self.satellites_per_plane < 1:
             raise ScenarioError(
-                "una costellazione ad anelli deve avere almeno un piano e un satellite"
+                "a ring constellation needs at least one plane and one satellite"
             )
         if not 0 <= self.com_index < self.satellites_per_plane:
             raise ScenarioError(
-                f"com_index {self.com_index} è fuori dall'intervallo per "
-                f"{self.satellites_per_plane} satelliti per piano"
+                f"com_index {self.com_index} is out of range for "
+                f"{self.satellites_per_plane} satellites per plane"
             )
         if not (math.isfinite(self.horizon_s) and self.horizon_s > 0):
             raise ScenarioError(
-                f"l'orizzonte deve essere finito e > 0, invece è {self.horizon_s}"
+                f"the horizon must be finite and > 0, got {self.horizon_s}"
             )
 
 
@@ -168,7 +168,7 @@ class RingConstellationBuilder:
         known = set(self._order)
         for node in (*self._spec.plmm_overrides_gb, *self._spec.hpc_phases_s):
             if node not in known:
-                raise ScenarioError(f"{node} non è un satellite dell'anello")
+                raise ScenarioError(f"{node} is not a satellite of the ring")
 
     def _plane(self, plane: int) -> Plane:
         satellites = tuple(

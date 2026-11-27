@@ -33,7 +33,7 @@ def test_a_periodic_plan_covers_any_horizon() -> None:
 
 
 def test_a_periodic_plan_needs_the_horizon() -> None:
-    with pytest.raises(DocumentError, match="orizzonte"):
+    with pytest.raises(DocumentError, match="horizon"):
         load_contact_plan(EXAMPLE / "contact_plan_periodico.yaml")
 
 

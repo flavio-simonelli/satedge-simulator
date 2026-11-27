@@ -47,7 +47,7 @@ def read_periodic(path: Path, horizon_s: float | None) -> ContactPlan:
     """
     if horizon_s is None:
         raise ScenarioError(
-            "un contact plan periodico richiede l'orizzonte della simulazione"
+            "a periodic contact plan needs the horizon of the simulation"
         )
     document = read_document(path, PeriodicContactPlanDoc)
     windows: dict[tuple[str, str], WindowSet] = {}

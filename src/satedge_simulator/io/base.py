@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
-from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from satedge_simulator.errors import DocumentError
 
-SUPPORTED_MAJOR_VERSION = "1."
+SUPPORTED_VERSION = (1, 0)
+"""The highest schema version this simulator reads, as (major, minor).
+
+Minor versions only add optional fields, so any minor up to this one is read; a new major
+version is not read at all.
+"""
+
+_VERSION_PATTERN = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?$")
 
 
 class Document(BaseModel):
@@ -20,9 +27,31 @@ class Document(BaseModel):
 
 
 def check_schema_version(value: str) -> str:
-    """Accept only the supported major version of the schema."""
-    if not value.startswith(SUPPORTED_MAJOR_VERSION):
-        raise ValueError(f"versione dello schema non supportata {value!r}, attesa 1.x")
+    """Accept a schema version of the form ``MAJOR.MINOR`` or ``MAJOR.MINOR.PATCH``.
+
+    The version must be supported: the same major as ``SUPPORTED_VERSION`` and a minor no newer
+    than it. The patch number does not matter.
+
+    Raises:
+        ValueError: If the version is malformed, has another major, or a newer minor.
+    """
+    match = _VERSION_PATTERN.match(value)
+    if match is None:
+        raise ValueError(
+            f"schema_version {value!r} is not a version: expected MAJOR.MINOR or MAJOR.MINOR.PATCH"
+        )
+    major, minor = int(match.group(1)), int(match.group(2))
+    supported_major, supported_minor = SUPPORTED_VERSION
+    if major != supported_major:
+        raise ValueError(
+            f"schema_version {value!r} has major {major}, but this simulator reads only "
+            f"major {supported_major}"
+        )
+    if minor > supported_minor:
+        raise ValueError(
+            f"schema_version {value!r} is newer than this simulator supports "
+            f"({supported_major}.{supported_minor})"
+        )
     return value
 
 
@@ -38,10 +67,10 @@ def read_document[T: BaseModel](path: str | Path, schema: type[T]) -> T:
         data = yaml.safe_load(text)
     except OSError as error:
         raise DocumentError(
-            f"{path}: impossibile leggere il file ({_reason(error)})"
+            f"{path}: cannot read the file ({_reason(error)})"
         ) from error
     except yaml.YAMLError as error:
-        raise DocumentError(f"{path}: YAML non valido: {error}") from error
+        raise DocumentError(f"{path}: invalid YAML: {error}") from error
     try:
         return schema.model_validate(data)
     except ValidationError as error:
@@ -49,56 +78,19 @@ def read_document[T: BaseModel](path: str | Path, schema: type[T]) -> T:
 
 
 def describe(error: ValidationError) -> str:
-    """The errors of a validation, one per line, in Italian.
-
-    The frequent kinds are translated; the others keep the message of pydantic.
-    """
+    """The errors of a validation, one per line, with the messages of pydantic."""
     lines = [
-        f"{'.'.join(str(part) for part in e['loc']) or 'documento'}: {_message(e)}"
+        f"{'.'.join(str(part) for part in e['loc']) or 'document'}: {e['msg']}"
         for e in error.errors()
     ]
-    return "\n  ".join(["il documento non è valido:", *lines])
-
-
-_MESSAGES = {
-    "missing": "campo obbligatorio mancante",
-    "extra_forbidden": "campo non previsto",
-    "float_type": "deve essere un numero",
-    "float_parsing": "deve essere un numero",
-    "int_type": "deve essere un numero intero",
-    "int_parsing": "deve essere un numero intero",
-    "string_type": "deve essere un testo",
-    "bool_type": "deve essere vero o falso",
-    "bool_parsing": "deve essere vero o falso",
-    "list_type": "deve essere una lista",
-    "dict_type": "deve essere una mappa di campi",
-    "model_type": "deve essere una mappa di campi",
-    "finite_number": "deve essere un numero finito",
-    "greater_than": "deve essere maggiore di {gt}",
-    "greater_than_equal": "deve essere maggiore o uguale a {ge}",
-    "less_than": "deve essere minore di {lt}",
-    "less_than_equal": "deve essere minore o uguale a {le}",
-    "too_short": "deve avere almeno {min_length} elementi",
-    "too_long": "deve avere al più {max_length} elementi",
-    "literal_error": "deve essere uno tra {expected}",
-    "enum": "deve essere uno tra {expected}",
-}
-
-
-def _message(error: Any) -> str:
-    if error["type"] == "value_error":
-        return str(error["ctx"]["error"])  # our validators: already in Italian
-    template = _MESSAGES.get(error["type"])
-    if template is None:
-        return str(error["msg"])
-    return template.format(**error.get("ctx", {}))
+    return "\n  ".join(["the document is not valid:", *lines])
 
 
 def _reason(error: OSError) -> str:
     if isinstance(error, FileNotFoundError):
-        return "il file non esiste"
+        return "the file does not exist"
     if isinstance(error, IsADirectoryError):
-        return "è una cartella"
+        return "it is a directory"
     if isinstance(error, PermissionError):
-        return "permesso negato"
+        return "permission denied"
     return error.strerror or str(error)
