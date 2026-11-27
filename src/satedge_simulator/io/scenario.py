@@ -1,10 +1,8 @@
 """Scenario file: the paths of the scheduler, workload, satellites and topology files.
 
-This module reads the five files together and checks some of the names that one file takes from
-another: the types of the satellites, and the origins of the explicit requests.
-
-It reads the documents only. The objects of the domain are built from them by
-:mod:`satedge_simulator.io.loading.scenario`.
+This module reads the scenario file only. Each of the files it names is read by its own module,
+when whoever needs it asks for it. The names that one of those files takes from another are
+checked where the objects of the domain are built, in :mod:`satedge_simulator.io.loading`.
 """
 
 from __future__ import annotations
@@ -13,12 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from satedge_simulator.errors import DocumentError
 from satedge_simulator.io.base import VersionedDocument, read_document
-from satedge_simulator.io.satellites import SatelliteTypeDoc, load_satellites
-from satedge_simulator.io.scheduler import SchedulerDoc, SchedulerFile
-from satedge_simulator.io.topology import TopologyDoc, read_topology
-from satedge_simulator.io.workload import ExplicitWorkloadDoc, WorkloadDoc, WorkloadFile
 
 
 class ScenarioDoc(VersionedDocument):
@@ -40,59 +33,36 @@ class ScenarioDoc(VersionedDocument):
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioFiles:
-    """The documents of a scenario, and of the four files it names.
+class ScenarioPaths:
+    """The files that a scenario file names, as paths that can be opened.
 
     Attributes:
-        scenario: The scenario file.
         scheduler: The scheduler file.
-        workload: The workload file, explicit or stochastic.
-        satellites: The satellite types, by name.
+        workload: The workload file.
+        satellites: The satellites file.
         topology: The topology file.
     """
 
-    scenario: ScenarioDoc
-    scheduler: SchedulerDoc
-    workload: WorkloadDoc
-    satellites: dict[str, SatelliteTypeDoc]
-    topology: TopologyDoc
+    scheduler: Path
+    workload: Path
+    satellites: Path
+    topology: Path
 
 
-def read_scenario(path: str | Path) -> ScenarioFiles:
-    """Read the scenario in ``path`` and the four files it names, and check their references.
+def read_scenario(path: str | Path) -> ScenarioPaths:
+    """Read the scenario file ``path``, and give the paths of the files it names. Those files
+    are not opened.
 
     Raises:
-        DocumentError: If a file cannot be read or is not valid, if a satellite has a type that
-            the satellites file does not define, or if an explicit request starts from a name
-            that is not a satellite of the topology. The message names a file.
+        DocumentError: If the format is unknown, the file cannot be read, its text is not valid
+            in its format, it does not match the schema, or its version is not supported. The
+            message names the file.
     """
-    scenario = read_document(path, ScenarioDoc)
+    document = read_document(path, ScenarioDoc)
     base = Path(path).parent
-    files = ScenarioFiles(
-        scenario=scenario,
-        scheduler=SchedulerFile.read(base / scenario.scheduler),
-        workload=WorkloadFile.read(base / scenario.workload),
-        satellites=load_satellites(base / scenario.satellites),
-        topology=read_topology(base / scenario.topology),
+    return ScenarioPaths(
+        scheduler=base / document.scheduler,
+        workload=base / document.workload,
+        satellites=base / document.satellites,
+        topology=base / document.topology,
     )
-    _check_references(path, files)
-    return files
-
-
-def _check_references(path: str | Path, files: ScenarioFiles) -> None:
-    """Check that the satellite types and the request origins are defined."""
-    nodes = [node for plane in files.topology.planes for node in plane.nodes]
-    for node in nodes:
-        if node.type not in files.satellites:
-            raise DocumentError(
-                f"{path}: node {node.name} has the type {node.type!r}, "
-                "which the satellites file does not define"
-            )
-    if isinstance(files.workload, ExplicitWorkloadDoc):
-        names = {node.name for node in nodes}
-        for request in files.workload.requests:
-            if request.origin not in names:
-                raise DocumentError(
-                    f"{path}: request {request.id} starts from {request.origin!r}, "
-                    "which is not a satellite of the topology"
-                )

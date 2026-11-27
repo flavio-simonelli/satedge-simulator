@@ -5,7 +5,8 @@ and which of them are required. Unknown fields are errors. Whether a value is me
 the sign of a time or of a rate, is not checked here: it is an invariant of the domain.
 
 The names that refer to another file are not checked here either: the type of a satellite is
-checked against the satellites file by :func:`~satedge_simulator.io.scenario.read_scenario`.
+checked against the satellites file when the network is built, by
+:func:`~satedge_simulator.io.loading.topology.build_network`.
 """
 
 from __future__ import annotations

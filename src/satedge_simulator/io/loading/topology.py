@@ -49,13 +49,12 @@ def build_network(
 ) -> Network:
     """The network that the documents describe.
 
-    The type of every satellite must be in ``satellite_types``, which
-    :func:`~satedge_simulator.io.scenario.read_scenario` checks. The two paths are used by the
-    error messages only.
+    The two paths are used by the error messages only.
 
     Raises:
-        DocumentError: If a value breaks a rule of the domain, or a link names an unknown node.
-            The message names the file that holds the value.
+        DocumentError: If a satellite has a type that ``satellite_types`` does not define, a
+            link names an unknown node, or a value breaks a rule of the domain. The message
+            names the file that holds the value.
     """
     planes = tuple(
         _plane(doc, satellite_types, topology_file, satellites_file)
@@ -111,6 +110,12 @@ def _plane(
     satellites_file: Path,
 ) -> OrbitPlane:
     period_s = doc.period_s if isinstance(doc, PeriodicPlaneDoc) else None
+    for node in doc.nodes:
+        if node.type not in satellite_types:
+            raise DocumentError(
+                f"{topology_file}: satellite {node.name!r}: the type {node.type!r} is not "
+                f"defined in {satellites_file}"
+            )
     satellites = tuple(
         _satellite(
             node,
