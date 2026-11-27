@@ -32,5 +32,5 @@ def test_a_missing_file_says_so(tmp_path: Path) -> None:
     with pytest.raises(DocumentError) as raised:
         read_document(path, Sample)
     assert (
-        str(raised.value) == f"{path}: cannot read the file (the file does not exist)"
+        str(raised.value) == f"{path}: cannot read the file (No such file or directory)"
     )

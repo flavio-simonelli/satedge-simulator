@@ -67,30 +67,17 @@ def read_document[T: BaseModel](path: str | Path, schema: type[T]) -> T:
         data = yaml.safe_load(text)
     except OSError as error:
         raise DocumentError(
-            f"{path}: cannot read the file ({_reason(error)})"
+            f"{path}: cannot read the file ({error.strerror or error})"
         ) from error
     except yaml.YAMLError as error:
         raise DocumentError(f"{path}: invalid YAML: {error}") from error
     try:
         return schema.model_validate(data)
     except ValidationError as error:
-        raise DocumentError(f"{path}: {describe(error)}") from error
-
-
-def describe(error: ValidationError) -> str:
-    """The errors of a validation, one per line, with the messages of pydantic."""
-    lines = [
-        f"{'.'.join(str(part) for part in e['loc']) or 'document'}: {e['msg']}"
-        for e in error.errors()
-    ]
-    return "\n  ".join(["the document is not valid:", *lines])
-
-
-def _reason(error: OSError) -> str:
-    if isinstance(error, FileNotFoundError):
-        return "the file does not exist"
-    if isinstance(error, IsADirectoryError):
-        return "it is a directory"
-    if isinstance(error, PermissionError):
-        return "permission denied"
-    return error.strerror or str(error)
+        lines = [
+            f"{'.'.join(str(part) for part in e['loc']) or 'document'}: {e['msg']}"
+            for e in error.errors()
+        ]
+        raise DocumentError(
+            "\n  ".join([f"{path}: the document is not valid:", *lines])
+        ) from error
