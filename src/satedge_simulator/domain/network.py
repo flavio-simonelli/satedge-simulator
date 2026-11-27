@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from satedge_simulator.domain.ground_station import GroundStation
 from satedge_simulator.domain.link import CandidateLink
 from satedge_simulator.domain.orbit_plane import OrbitPlane
+from satedge_simulator.domain.requests import RequestSpec
 from satedge_simulator.domain.satellite import Satellite
 from satedge_simulator.domain.terminal import LinkKind, Terminal
 from satedge_simulator.errors import DomainError
@@ -107,6 +108,20 @@ class Network:
             return self._links_of[node]
         except KeyError:
             raise DomainError(f"node {node.id!r} is not in the network") from None
+
+    def require_request(self, request: RequestSpec) -> None:
+        """Check that ``request`` can run on this network.
+
+        Every request obeys this rule, whether it is written in advance or generated.
+
+        Raises:
+            DomainError: If its origin is not a satellite of the network.
+        """
+        if not self.has(request.origin):
+            raise DomainError(
+                f"request {request.id!r} starts from satellite {request.origin.id!r}, "
+                "which is not in the network"
+            )
 
     # ---- checks --------------------------------------------------------------------
 
