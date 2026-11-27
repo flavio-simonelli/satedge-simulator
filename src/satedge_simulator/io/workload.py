@@ -14,9 +14,14 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal
 
-from pydantic import AfterValidator, Field, RootModel
+from pydantic import AfterValidator, Field
 
-from satedge_simulator.io.base import Document, VersionedDocument, read_document
+from satedge_simulator.io.base import (
+    Document,
+    Registry,
+    VersionedDocument,
+    read_variant,
+)
 
 
 class WorkloadKind(StrEnum):
@@ -57,7 +62,18 @@ class RequestDoc(Document):
     tasks: list[TaskDoc] = Field(min_length=1)
 
 
-class ExplicitWorkloadDoc(VersionedDocument):
+class WorkloadDoc(VersionedDocument):
+    """A workload file, whatever its kind: what every kind has.
+
+    Each kind is a subclass, registered in :data:`WORKLOADS` under its kind name.
+    """
+
+
+WORKLOADS: Registry[WorkloadDoc] = Registry("kind")
+
+
+@WORKLOADS.variant("explicit")
+class ExplicitWorkloadDoc(WorkloadDoc):
     """A workload of explicit requests, in FIFO order within each priority class."""
 
     SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
@@ -104,7 +120,8 @@ class TaskModelDoc(Document):
     output_size_gb: LogNormalDoc
 
 
-class StochasticWorkloadDoc(VersionedDocument):
+@WORKLOADS.variant("stochastic")
+class StochasticWorkloadDoc(WorkloadDoc):
     """A stochastic workload: the model that generates the requests during the simulation.
 
     Each request has a raw data of ``raw_size_gb``, and a number of tasks drawn from
@@ -120,21 +137,15 @@ class StochasticWorkloadDoc(VersionedDocument):
     task: TaskModelDoc
 
 
-class WorkloadDoc(
-    RootModel[
-        Annotated[
-            ExplicitWorkloadDoc | StochasticWorkloadDoc, Field(discriminator="kind")
-        ]
-    ]
-):
-    """A workload file: explicit requests, or a stochastic model, chosen by ``kind``."""
+class WorkloadFile:
+    """The workload file: the reader of the variants registered in :data:`WORKLOADS`."""
 
+    @classmethod
+    def read(cls, path: str | Path) -> WorkloadDoc:
+        """Read and validate the workload file in ``path``, as the kind it names.
 
-def read_workload(path: str | Path) -> ExplicitWorkloadDoc | StochasticWorkloadDoc:
-    """Read and validate the workload file in ``path``.
-
-    Raises:
-        DocumentError: If the file cannot be read or does not match the schema. The message
-            names the file.
-    """
-    return read_document(path, WorkloadDoc).root
+        Raises:
+            DocumentError: If the file cannot be read, does not match the schema of its kind and
+                version, or names no known kind. The message names the file.
+        """
+        return read_variant(path, WORKLOADS)

@@ -17,6 +17,7 @@ def write(tmp_path: Path, text: str) -> Path:
 
 WORKLOAD = """\
 schema_version: "1.0.0"
+kind: explicit
 requests:
   - id: R1
     priority: urgent

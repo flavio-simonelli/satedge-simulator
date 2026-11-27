@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal
+from typing import ClassVar, Literal
 
-from pydantic import Field, RootModel
+from pydantic import Field
 
-from satedge_simulator.io.base import VersionedDocument, read_document
+from satedge_simulator.io.base import Registry, VersionedDocument, read_variant
 
 
 class SchedulerMethod(StrEnum):
@@ -29,7 +29,20 @@ class DeadlineKind(StrEnum):
     SOFT = "soft"
 
 
-class SequentialSchedulerDoc(VersionedDocument):
+class SchedulerDoc(VersionedDocument):
+    """A scheduler file, whatever its method: what every method has.
+
+    Each method is a subclass, registered in :data:`SCHEDULERS` under its method name.
+    """
+
+    deadline: DeadlineKind
+
+
+SCHEDULERS: Registry[SchedulerDoc] = Registry("method")
+
+
+@SCHEDULERS.variant("sequential")
+class SequentialSchedulerDoc(SchedulerDoc):
     """The sequential heuristic. It has no time limit, so its result is ready when it finishes.
 
     ``lead_time_s`` is how long before a contact the scheduling starts. It is required, since
@@ -38,11 +51,11 @@ class SequentialSchedulerDoc(VersionedDocument):
 
     SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
     method: Literal[SchedulerMethod.SEQUENTIAL]
-    deadline: DeadlineKind
     lead_time_s: float = Field(gt=0)
 
 
-class MilpSchedulerDoc(VersionedDocument):
+@SCHEDULERS.variant("milp")
+class MilpSchedulerDoc(SchedulerDoc):
     """The MILP, with its level, its warm start and its time limit.
 
     ``lead_time_s`` may be left out: it is then the time limit. ``level`` is the level of the
@@ -52,30 +65,21 @@ class MilpSchedulerDoc(VersionedDocument):
 
     SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
     method: Literal[SchedulerMethod.MILP]
-    deadline: DeadlineKind
     lead_time_s: float | None = Field(default=None, gt=0)
     level: int
     warm_start: bool
     time_limit_s: float = Field(gt=0)
 
 
-class SchedulerDoc(
-    RootModel[
-        Annotated[
-            SequentialSchedulerDoc | MilpSchedulerDoc, Field(discriminator="method")
-        ]
-    ]
-):
-    """A scheduler file: the sequential heuristic or the MILP, chosen by ``method``."""
+class SchedulerFile:
+    """The scheduler file: the reader of the variants registered in :data:`SCHEDULERS`."""
 
+    @classmethod
+    def read(cls, path: str | Path) -> SchedulerDoc:
+        """Read and validate the scheduler file in ``path``, as the variant it names.
 
-def read_scheduler(
-    path: str | Path,
-) -> SequentialSchedulerDoc | MilpSchedulerDoc:
-    """Read and validate the scheduler file in ``path``.
-
-    Raises:
-        DocumentError: If the file cannot be read or does not match the schema. The message
-            names the file.
-    """
-    return read_document(path, SchedulerDoc).root
+        Raises:
+            DocumentError: If the file cannot be read, does not match the schema of its method and
+                version, or names no known method. The message names the file.
+        """
+        return read_variant(path, SCHEDULERS)

@@ -19,7 +19,7 @@ from satedge_simulator.errors import DocumentError, ScenarioError
 from satedge_simulator.io.workload import (
     RequestDoc,
     StochasticWorkloadDoc,
-    read_workload,
+    WorkloadFile,
 )
 
 
@@ -35,7 +35,7 @@ def load_workload(path: str | Path) -> tuple[RequestSpec, ...] | WorkloadModel:
         NotImplementedError: For a stochastic workload, for now: its tasks are not yet in the
             domain model.
     """
-    document = read_workload(path)
+    document = WorkloadFile.read(path)
     if isinstance(document, StochasticWorkloadDoc):
         raise NotImplementedError(
             "a stochastic workload is not connected to the domain model yet"

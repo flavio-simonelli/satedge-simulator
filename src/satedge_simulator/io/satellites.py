@@ -63,7 +63,7 @@ class SatelliteTypeDoc(Document):
     description: str
     plmm: PlmmDoc
     hpc: HpcDoc
-    antennas: list[AntennaDoc] = Field(default_factory=list)
+    antennas: list[AntennaDoc] = Field(min_length=1)
 
 
 class SatellitesDoc(VersionedDocument):

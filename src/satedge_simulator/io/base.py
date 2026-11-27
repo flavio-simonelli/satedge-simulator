@@ -6,8 +6,9 @@ The format of a file is chosen by its suffix, see :mod:`satedge_simulator.io.for
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
@@ -69,6 +70,35 @@ def check_schema_version(value: str, supported: tuple[int, int]) -> str:
     return value
 
 
+def _load(path: str | Path, codec: Codec | None) -> Any:
+    """The plain data of the file ``path``, parsed in its format."""
+    codec = codec or codec_for(path)
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except OSError as error:
+        raise DocumentError(
+            f"{path}: cannot read the file ({error.strerror or error})"
+        ) from error
+    try:
+        return codec.parse(text)
+    except codec.error as error:
+        raise DocumentError(f"{path}: invalid {codec.name}: {error}") from error
+
+
+def _validate[T: BaseModel](path: str | Path, schema: type[T], data: Any) -> T:
+    """``data`` validated against ``schema``; the errors name the file."""
+    try:
+        return schema.model_validate(data)
+    except ValidationError as error:
+        lines = [
+            f"{'.'.join(str(part) for part in e['loc']) or 'document'}: {e['msg']}"
+            for e in error.errors()
+        ]
+        raise DocumentError(
+            "\n  ".join([f"{path}: the document is not valid:", *lines])
+        ) from error
+
+
 def read_document[T: BaseModel](
     path: str | Path, schema: type[T], codec: Codec | None = None
 ) -> T:
@@ -80,27 +110,62 @@ def read_document[T: BaseModel](
         DocumentError: If the format is unknown, the file cannot be read, its text is not valid
             in its format, or it does not match the schema. The message names the file.
     """
-    codec = codec or codec_for(path)
-    try:
-        text = Path(path).read_text(encoding="utf-8")
-    except OSError as error:
-        raise DocumentError(
-            f"{path}: cannot read the file ({error.strerror or error})"
-        ) from error
-    try:
-        data = codec.parse(text)
-    except codec.error as error:
-        raise DocumentError(f"{path}: invalid {codec.name}: {error}") from error
-    try:
-        return schema.model_validate(data)
-    except ValidationError as error:
-        lines = [
-            f"{'.'.join(str(part) for part in e['loc']) or 'document'}: {e['msg']}"
-            for e in error.errors()
-        ]
-        raise DocumentError(
-            "\n  ".join([f"{path}: the document is not valid:", *lines])
-        ) from error
+    return _validate(path, schema, _load(path, codec))
+
+
+class Registry[T: Document]:
+    """The variants of one kind of file, by their value.
+
+    A file names its variant with ``field`` (for example ``method``). Each variant class registers
+    itself with :meth:`variant`, so the registry never lists the variants: a new variant is a new
+    class, and the others are not touched. Each class checks the major version of its own file.
+    """
+
+    def __init__(self, field: str) -> None:
+        self._field = field
+        self._schemas: dict[str, type[T]] = {}
+
+    def variant(self, value: str) -> Callable[[type[T]], type[T]]:
+        """Decorator: register the class under ``value``."""
+
+        def register(schema: type[T]) -> type[T]:
+            if value in self._schemas:
+                raise ValueError(f"{self._field} {value!r} is already registered")
+            self._schemas[value] = schema
+            return schema
+
+        return register
+
+    def choose(self, path: str | Path, data: Any) -> type[T]:
+        """The schema that reads ``data``, from its variant.
+
+        Raises:
+            DocumentError: If the data is not a mapping, or names no known variant. The message
+                names the file.
+        """
+        if not isinstance(data, dict):
+            raise DocumentError(f"{path}: the document is not a mapping of fields")
+        value = data.get(self._field)
+        schema = self._schemas.get(value) if isinstance(value, str) else None
+        if schema is None:
+            known = ", ".join(sorted(self._schemas))
+            raise DocumentError(
+                f"{path}: {self._field} {value!r} is not supported; supported: {known}"
+            )
+        return schema
+
+
+def read_variant[T: Document](
+    path: str | Path, registry: Registry[T], codec: Codec | None = None
+) -> T:
+    """Read the file ``path``, and validate it against the schema its variant selects.
+
+    Raises:
+        DocumentError: If the file cannot be read or is not valid, or names no known variant.
+            The message names the file.
+    """
+    data = _load(path, codec)
+    return _validate(path, registry.choose(path, data), data)
 
 
 def write_document(
