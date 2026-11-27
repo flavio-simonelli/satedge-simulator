@@ -1,104 +1,57 @@
-"""Scenario: what to simulate, and how long, with the planner's computing budget."""
+"""Scenario: the network and the requests it serves, checked together."""
 
 from __future__ import annotations
 
-import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from satedge_simulator.domain.network import Network
 from satedge_simulator.domain.requests import RequestSpec
-from satedge_simulator.domain.topology import Constellation
-from satedge_simulator.domain.workload_model import WorkloadModel
 from satedge_simulator.errors import DomainError
-from satedge_simulator.rng.rngs import DEFAULT_SEED, MODULUS
 
 
-@dataclass(frozen=True, slots=True)
-class SimulationSettings:
-    """How the execution is run.
-
-    Attributes:
-        end_s: Instant at which the simulation stops, in seconds.
-        tolerance_s: How long an action may wait for its preconditions past its planned instant.
-        strict: Whether the first violation of the plan stops the simulation.
-        seed: Initial state of the random number generator, ``0 < seed < 2³¹ − 1``. With the
-            same seed, two runs draw the same workload.
-    """
-
-    end_s: float
-    tolerance_s: float = 1e-4
-    strict: bool = False
-    seed: int = DEFAULT_SEED
-
-    def __post_init__(self) -> None:
-        if not (math.isfinite(self.end_s) and self.end_s > 0):
-            raise DomainError(
-                f"la fine della simulazione deve essere finita e > 0, invece è {self.end_s}"
-            )
-        if not 0 < self.seed < MODULUS:
-            raise DomainError(
-                f"il seed deve essere compreso tra 1 e {MODULUS - 1}, invece è {self.seed}"
-            )
-        if not (math.isfinite(self.tolerance_s) and self.tolerance_s >= 0):
-            raise DomainError(
-                f"la tolleranza deve essere finita e >= 0, invece è {self.tolerance_s}"
-            )
-
-
-def world_horizon_s(
-    end_s: float, requests: Iterable[RequestSpec], model: WorkloadModel | None
-) -> float:
-    """How far the windows of the network must reach for a run that ends at ``end_s``.
-
-    The observation stops at the end, but the constellation does not: a request that arrives
-    near the end is planned against the windows after it, up to its deadline. So the computing
-    windows, the periodic contacts and the horizon of the planner reach the latest deadline a
-    request of the run can have: the deadline of a request of the workload file, or the end
-    plus the longest life of a generated request. Without it, the requests near the end would
-    be rejected only because the windows stop there, and the finite-horizon estimates would be
-    biased.
-    """
-    horizon = max((r.deadline_s for r in requests), default=end_s)
-    if model is not None:
-        horizon = max(horizon, end_s + model.longest_life_s)
-    return max(horizon, end_s)
-
-
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Scenario:
-    """A complete simulation: the constellation, the workload and the settings.
+    """What a simulation runs: the network, and the requests known before it starts.
+
+    Requests generated during the run are not listed here: their source checks each one
+    with :meth:`require_request`, so every request obeys the same rules, whatever its origin.
 
     Attributes:
-        constellation: The network that is simulated.
-        requests: The requests that arrive during the simulation.
-        settings: How the execution is run.
-        lead_time_s: Seconds the planner has to compute a plan, before the contact with a COM.
-            ``None`` means the time limit of the solver is used.
-        workload_model: The stochastic workload, whose requests are drawn during the run, on
-            top of ``requests``; ``None`` for a deterministic workload.
+        network: The network.
+        requests: The requests known in advance, each listed once. Empty when the workload is
+            generated during the run.
+
+    Raises:
+        DomainError: If a request starts from a satellite that is not in the network, or the
+            same request is listed twice.
     """
 
-    constellation: Constellation
-    requests: tuple[RequestSpec, ...]
-    settings: SimulationSettings
-    lead_time_s: float | None = None
-    workload_model: WorkloadModel | None = None
+    network: Network
+    requests: tuple[RequestSpec, ...] = ()
 
     def __post_init__(self) -> None:
+        # Accept any iterable, and store a tuple so the scenario stays immutable.
+        object.__setattr__(self, "requests", tuple(self.requests))
+        seen: set[RequestSpec] = set()
         for request in self.requests:
-            if not any(request.origin is s for s in self.constellation.satellites):
-                raise DomainError(
-                    f"richiesta {request.id}: l'origine {request.origin.id!r} non è un satellite "
-                    "della costellazione"
-                )
-        if self.lead_time_s is not None and not (
-            math.isfinite(self.lead_time_s) and self.lead_time_s > 0
-        ):
+            if request in seen:
+                raise DomainError(f"request {request.id!r} is listed twice")
+            seen.add(request)
+            self.require_request(request)
+
+    def require_request(self, request: RequestSpec) -> None:
+        """Check that ``request`` can run in this scenario.
+
+        Raises:
+            DomainError: If its origin is not a satellite of the network.
+        """
+        if not self.network.has(request.origin):
             raise DomainError(
-                f"l'anticipo del calcolo deve essere finito e > 0, invece è {self.lead_time_s}"
+                f"request {request.id!r} starts from satellite {request.origin.id!r}, "
+                "which is not in the network"
             )
 
-    @property
-    def world_horizon_s(self) -> float:
-        """How far the windows of the network reach: see :func:`world_horizon_s`."""
-        return world_horizon_s(self.settings.end_s, self.requests, self.workload_model)
+    def with_requests(self, requests: Iterable[RequestSpec]) -> Scenario:
+        """A new scenario with the same network and ``requests``, checked again."""
+        return Scenario(self.network, tuple(requests))
