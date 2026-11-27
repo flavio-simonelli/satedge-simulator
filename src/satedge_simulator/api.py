@@ -14,12 +14,13 @@ from satedge_simulator.analysis.batch_means import BatchMeansReport, batch_means
 from satedge_simulator.analysis.replications import ReplicationReport, replicate
 from satedge_simulator.domain.scenario import Scenario
 from satedge_simulator.errors import ScenarioError
+from satedge_simulator.export.results import build_results
 from satedge_simulator.io.analysis_results import (
     write_autocorrelation,
     write_batch_means,
     write_replications,
 )
-from satedge_simulator.io.results import write_metrics
+from satedge_simulator.io.base import write_document
 from satedge_simulator.io.scenario import load_scenario
 from satedge_simulator.observe.bus import EventBus
 from satedge_simulator.observe.event_log import JsonlEventLog
@@ -143,12 +144,9 @@ def simulate_file(
         tolerance_s=max(scenario.settings.tolerance_s, 1e-6),
     )
     if output is not None:
-        write_metrics(
+        write_document(
             Path(output) / METRICS_FILE,
-            outcome.end_s,
-            outcome.metrics,
-            outcome.records,
-            findings,
+            build_results(outcome.end_s, outcome.metrics, outcome.records, findings),
         )
     return SimulationResult(outcome, findings)
 

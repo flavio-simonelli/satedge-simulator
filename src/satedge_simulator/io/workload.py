@@ -1,20 +1,29 @@
-"""Workload file: the requests, each a pipeline of tasks that starts from raw data on a satellite."""
+"""Workload file: explicit requests, or the parameters of a stochastic workload.
+
+The ``kind`` field says which one the file holds. ``explicit`` lists each request, each a
+pipeline of tasks that starts from raw data on a satellite. ``stochastic`` gives the parameters
+of the model that generates the requests during the simulation.
+
+This module only reads the file. The conversion into the objects of the domain is in
+:mod:`satedge_simulator.loading.workload`.
+"""
 
 from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Annotated, ClassVar, Literal
 
-from pydantic import Field, field_validator
+from pydantic import AfterValidator, Field, RootModel
 
-from satedge_simulator.domain.workload import (
-    DEFAULT_DEADLINE_AFTER_RELEASE_S,
-    Priority,
-    RequestSpec,
-    TaskSpec,
-)
-from satedge_simulator.errors import DocumentError, ScenarioError
-from satedge_simulator.io.base import Document, check_schema_version, read_document
+from satedge_simulator.io.base import Document, VersionedDocument, read_document
+
+
+class WorkloadKind(StrEnum):
+    """How the workload is given: as requests, or as a stochastic model."""
+
+    EXPLICIT = "explicit"
+    STOCHASTIC = "stochastic"
 
 
 class PriorityName(StrEnum):
@@ -25,7 +34,7 @@ class PriorityName(StrEnum):
 
 
 class TaskDoc(Document):
-    """One task of a pipeline."""
+    """One task of an explicit request."""
 
     execution_s: float
     output_size_gb: float
@@ -48,48 +57,84 @@ class RequestDoc(Document):
     tasks: list[TaskDoc] = Field(min_length=1)
 
 
-class WorkloadDoc(Document):
-    """A workload file: the requests, in FIFO order within each priority class."""
+class ExplicitWorkloadDoc(VersionedDocument):
+    """A workload of explicit requests, in FIFO order within each priority class."""
 
-    schema_version: str
+    SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
+    kind: Literal[WorkloadKind.EXPLICIT]
     requests: list[RequestDoc] = Field(default_factory=list)
 
-    @field_validator("schema_version")
-    @classmethod
-    def _supported_version(cls, value: str) -> str:
-        return check_schema_version(value)
+
+def _check_float_range(value: tuple[float, float]) -> tuple[float, float]:
+    low, high = value
+    if low < 0 or low > high:
+        raise ValueError("a range [low, high] needs 0 <= low <= high")
+    return value
 
 
-def load_workload(path: str | Path) -> tuple[RequestSpec, ...]:
-    """Read the requests in ``path``, with the default deadlines of their priority classes.
+def _check_task_count_range(value: tuple[int, int]) -> tuple[int, int]:
+    low, high = value
+    if low < 1 or low > high:
+        raise ValueError("a range of tasks [low, high] needs 1 <= low <= high")
+    return value
+
+
+FloatRange = Annotated[tuple[float, float], AfterValidator(_check_float_range)]
+"""A range ``[low, high]``: each value is drawn uniformly between the two."""
+
+TaskCountRange = Annotated[tuple[int, int], AfterValidator(_check_task_count_range)]
+"""A range ``[low, high]`` of whole numbers of tasks."""
+
+
+class LogNormalDoc(Document):
+    """A positive, skewed quantity, described by its mean and its coefficient of variation.
+
+    ``cv`` is the standard deviation divided by the mean: 0.5 means a moderate spread, 2 a
+    very long tail. Each draw is independent.
+    """
+
+    mean: float = Field(gt=0)
+    cv: float = Field(gt=0)
+
+
+class TaskModelDoc(Document):
+    """What every task of a stochastic request is like. Each task draws its values here."""
+
+    execution_s: LogNormalDoc
+    output_size_gb: LogNormalDoc
+
+
+class StochasticWorkloadDoc(VersionedDocument):
+    """A stochastic workload: the model that generates the requests during the simulation.
+
+    Each request has a raw data of ``raw_size_gb``, and a number of tasks drawn from
+    ``tasks_per_request``. Every task draws its execution time and its output size from ``task``.
+    """
+
+    SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
+    kind: Literal[WorkloadKind.STOCHASTIC]
+    arrivals_per_hour: float = Field(gt=0)
+    urgent_probability: float = Field(ge=0, le=1)
+    raw_size_gb: FloatRange
+    tasks_per_request: TaskCountRange
+    task: TaskModelDoc
+
+
+class WorkloadDoc(
+    RootModel[
+        Annotated[
+            ExplicitWorkloadDoc | StochasticWorkloadDoc, Field(discriminator="kind")
+        ]
+    ]
+):
+    """A workload file: explicit requests, or a stochastic model, chosen by ``kind``."""
+
+
+def read_workload(path: str | Path) -> ExplicitWorkloadDoc | StochasticWorkloadDoc:
+    """Read and validate the workload file in ``path``.
 
     Raises:
-        DocumentError: If the file cannot be read or does not match the schema, if two requests
-            share an identifier, or if a request is not valid. The message names the file.
+        DocumentError: If the file cannot be read or does not match the schema. The message
+            names the file.
     """
-    document = read_document(path, WorkloadDoc)
-    requests = tuple(_request(doc) for doc in document.requests)
-    ids = [r.id for r in requests]
-    if len(set(ids)) != len(ids):
-        raise DocumentError(f"{path}: duplicate request identifiers")
-    return requests
-
-
-def _request(doc: RequestDoc) -> RequestSpec:
-    priority = Priority[doc.priority.name]
-    deadline = doc.deadline_s
-    if deadline is None:
-        deadline = doc.release_s + DEFAULT_DEADLINE_AFTER_RELEASE_S[priority]
-    try:
-        return RequestSpec(
-            id=doc.id,
-            priority=priority,
-            origin=doc.origin,
-            arrival_s=doc.release_s if doc.arrival_s is None else doc.arrival_s,
-            release_s=doc.release_s,
-            deadline_s=deadline,
-            raw_size_gb=doc.raw_size_gb,
-            tasks=tuple(TaskSpec(t.execution_s, t.output_size_gb) for t in doc.tasks),
-        )
-    except ScenarioError as error:
-        raise DocumentError(f"request {doc.id}: {error}") from error
+    return read_document(path, WorkloadDoc).root

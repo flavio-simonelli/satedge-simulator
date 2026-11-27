@@ -1,21 +1,18 @@
-"""Shared plumbing of the input files: the base of the schemas and the reading of one document."""
+"""Shared plumbing of the files: the base of the schemas, and the reading and writing of one document.
+
+The format of a file is chosen by its suffix, see :mod:`satedge_simulator.io.formats`.
+"""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import ClassVar
 
-import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from satedge_simulator.errors import DocumentError
-
-SUPPORTED_VERSION = (1, 0)
-"""The highest schema version this simulator reads, as (major, minor).
-
-Minor versions only add optional fields, so any minor up to this one is read; a new major
-version is not read at all.
-"""
+from satedge_simulator.io.formats import Codec, codec_for
 
 _VERSION_PATTERN = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?$")
 
@@ -26,11 +23,28 @@ class Document(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-def check_schema_version(value: str) -> str:
+class VersionedDocument(Document):
+    """Base of the files that carry a ``schema_version``.
+
+    Each subclass declares the highest version it reads, as ``SUPPORTED_VERSION``. The kinds of
+    file evolve separately, so each one has its own.
+    """
+
+    schema_version: str
+    SUPPORTED_VERSION: ClassVar[tuple[int, int]]
+
+    @field_validator("schema_version")
+    @classmethod
+    def _supported_version(cls, value: str) -> str:
+        return check_schema_version(value, cls.SUPPORTED_VERSION)
+
+
+def check_schema_version(value: str, supported: tuple[int, int]) -> str:
     """Accept a schema version of the form ``MAJOR.MINOR`` or ``MAJOR.MINOR.PATCH``.
 
-    The version must be supported: the same major as ``SUPPORTED_VERSION`` and a minor no newer
-    than it. The patch number does not matter.
+    ``supported`` is the highest ``(major, minor)`` the schema of this file reads. The version
+    must have the same major, and a minor no newer than ``supported``. The patch number does
+    not matter. Each kind of file has its own ``supported``, so the kinds evolve separately.
 
     Raises:
         ValueError: If the version is malformed, has another major, or a newer minor.
@@ -41,36 +55,42 @@ def check_schema_version(value: str) -> str:
             f"schema_version {value!r} is not a version: expected MAJOR.MINOR or MAJOR.MINOR.PATCH"
         )
     major, minor = int(match.group(1)), int(match.group(2))
-    supported_major, supported_minor = SUPPORTED_VERSION
+    supported_major, supported_minor = supported
     if major != supported_major:
         raise ValueError(
-            f"schema_version {value!r} has major {major}, but this simulator reads only "
+            f"schema_version {value!r} has major {major}, but this file reads only "
             f"major {supported_major}"
         )
     if minor > supported_minor:
         raise ValueError(
-            f"schema_version {value!r} is newer than this simulator supports "
+            f"schema_version {value!r} is newer than this simulator supports for this file "
             f"({supported_major}.{supported_minor})"
         )
     return value
 
 
-def read_document[T: BaseModel](path: str | Path, schema: type[T]) -> T:
-    """Read the YAML file ``path`` and validate it against ``schema``.
+def read_document[T: BaseModel](
+    path: str | Path, schema: type[T], codec: Codec | None = None
+) -> T:
+    """Read the file ``path`` and validate it against ``schema``.
+
+    The format is ``codec``, or else the one named by the suffix of ``path``.
 
     Raises:
-        DocumentError: If the file cannot be read, is not valid YAML, or does not match the
-            schema. The message names the file.
+        DocumentError: If the format is unknown, the file cannot be read, its text is not valid
+            in its format, or it does not match the schema. The message names the file.
     """
+    codec = codec or codec_for(path)
     try:
         text = Path(path).read_text(encoding="utf-8")
-        data = yaml.safe_load(text)
     except OSError as error:
         raise DocumentError(
             f"{path}: cannot read the file ({error.strerror or error})"
         ) from error
-    except yaml.YAMLError as error:
-        raise DocumentError(f"{path}: invalid YAML: {error}") from error
+    try:
+        data = codec.parse(text)
+    except codec.error as error:
+        raise DocumentError(f"{path}: invalid {codec.name}: {error}") from error
     try:
         return schema.model_validate(data)
     except ValidationError as error:
@@ -80,4 +100,26 @@ def read_document[T: BaseModel](path: str | Path, schema: type[T]) -> T:
         ]
         raise DocumentError(
             "\n  ".join([f"{path}: the document is not valid:", *lines])
+        ) from error
+
+
+def write_document(
+    path: str | Path, document: BaseModel, codec: Codec | None = None
+) -> None:
+    """Write ``document`` to the file ``path``, creating its directory if needed.
+
+    The format is ``codec``, or else the one named by the suffix of ``path``.
+
+    Raises:
+        DocumentError: If the format is unknown or the file cannot be written. The message names
+            the file.
+    """
+    codec = codec or codec_for(path)
+    file = Path(path)
+    try:
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(codec.dump(document), encoding="utf-8")
+    except OSError as error:
+        raise DocumentError(
+            f"{path}: cannot write the file ({error.strerror or error})"
         ) from error

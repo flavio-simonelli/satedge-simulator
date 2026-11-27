@@ -1,13 +1,50 @@
-# Caso di studio: 2 piani da 9 satelliti, una stazione a terra.
+# Caso di studio: 2 piani da 9 satelliti, una stazione a terra. Ogni piano è un anello di
+# link sempre disponibili (ring: true), quindi non sono scritti. I link COM–COM e COM–Terra hanno
+# le loro finestre di visibilità sulle 8 ore di simulazione.
 schema_version: "1.0.0"
-kind: ring_constellation
 ground_station: GS
-planes: 2
-satellites_per_plane: 9
-com_index: 0
-plmm_capacity_gb: 2000
-hpc_rate_gbps: 1.0
-hpc: {period_s: 5640, duration_s: 300, startup_s: 0}
-intra_link: {capacity_gbps: 1, latency_s: 0.015}
-inter_link: {capacity_gbps: 1, latency_s: 0.015}
-ground_link: {capacity_gbps: 1, latency_s: 0.015}
+planes:
+  - name: P1
+    ring: true
+    nodes:
+      - {name: COM1, type: com}
+      - {name: P1-S1, type: sar}
+      - {name: P1-S2, type: sar}
+      - {name: P1-S3, type: sar}
+      - {name: P1-S4, type: sar}
+      - {name: P1-S5, type: sar}
+      - {name: P1-S6, type: sar}
+      - {name: P1-S7, type: sar}
+      - {name: P1-S8, type: sar}
+  - name: P2
+    ring: true
+    nodes:
+      - {name: COM2, type: com}
+      - {name: P2-S1, type: sar}
+      - {name: P2-S2, type: sar}
+      - {name: P2-S3, type: sar}
+      - {name: P2-S4, type: sar}
+      - {name: P2-S5, type: sar}
+      - {name: P2-S6, type: sar}
+      - {name: P2-S7, type: sar}
+      - {name: P2-S8, type: sar}
+links:
+  - a: COM1
+    b: COM2
+    availability:
+      kind: windows
+      windows: [{start_s: 1500, end_s: 2100}, {start_s: 7140, end_s: 7740}, {start_s: 12780, end_s: 13380}, {start_s: 18420, end_s: 19020}, {start_s: 24060, end_s: 24660}]
+  - a: COM1
+    b: GS
+    availability:
+      kind: windows
+      windows: [{start_s: 2400, end_s: 2580}, {start_s: 5220, end_s: 5400}, {start_s: 8040, end_s: 8220}, {start_s: 10860, end_s: 11040}, {start_s: 13680, end_s: 13860}, {start_s: 16500, end_s: 16680}, {start_s: 19320, end_s: 19500}, {start_s: 22140, end_s: 22320}, {start_s: 24960, end_s: 25140}, {start_s: 27780, end_s: 27960}]
+  - a: COM2
+    b: GS
+    availability:
+      kind: windows
+      windows: [{start_s: 3900, end_s: 4080}, {start_s: 6720, end_s: 6900}, {start_s: 9540, end_s: 9720}, {start_s: 12360, end_s: 12540}, {start_s: 15180, end_s: 15360}, {start_s: 18000, end_s: 18180}, {start_s: 20820, end_s: 21000}, {start_s: 23640, end_s: 23820}, {start_s: 26460, end_s: 26640}]
+#   Forma periodica, per un link che si apre sempre uguale:
+#   - a: COM2
+#     b: GS
+#     availability: {kind: periodic, first_start_s: 3900, period_s: 2820, duration_s: 180}

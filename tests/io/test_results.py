@@ -14,7 +14,9 @@ from satedge_simulator.domain.topology import (
     WindowedAvailability,
 )
 from satedge_simulator.domain.violations import Violation, ViolationKind
-from satedge_simulator.io.results import SCHEMA_VERSION, results_document, write_metrics
+from satedge_simulator.export.results import build_results
+from satedge_simulator.io.base import write_document
+from satedge_simulator.io.results import SCHEMA_VERSION
 from satedge_simulator.metrics.as_run import AsRun
 from satedge_simulator.metrics.epochs import EpochCollector
 from satedge_simulator.metrics.plmm import PlmmCollector
@@ -57,6 +59,11 @@ def metrics() -> SimulationMetrics:
     )
 
 
+def results_document(end_s, sim_metrics, records, findings) -> dict:
+    """The document as the JSON values it becomes when written."""
+    return build_results(end_s, sim_metrics, records, findings).model_dump(mode="json")
+
+
 def record() -> RequestRecord:
     r = RequestRecord("R1", history=[(1.0, RequestStatus.ARRIVED)])
     r.move(RequestStatus.QUEUED, 1.0)
@@ -97,5 +104,5 @@ def test_the_findings_of_the_check_are_listed() -> None:
 
 def test_write_creates_the_directory(tmp_path: Path) -> None:
     path = tmp_path / "out" / "metrics.json"
-    write_metrics(path, 100.0, metrics(), {}, [])
+    write_document(path, build_results(100.0, metrics(), {}, []))
     assert json.loads(path.read_text(encoding="utf-8"))["verification"]["passed"]

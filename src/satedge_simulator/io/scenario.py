@@ -1,60 +1,31 @@
-"""Scenario file: the file that names the topology, the contact plan, the workload and the solver."""
+"""Scenario file: only the paths to the files that describe the scheduler, the workload, the satellites and the topology."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 from pydantic import field_validator
 
-from satedge_simulator.domain.scenario import (
-    Scenario,
-    SimulationSettings,
-    world_horizon_s,
-)
-from satedge_simulator.errors import DocumentError, ScenarioError
+from satedge_simulator.domain.scenario import Scenario
 from satedge_simulator.io.base import Document, check_schema_version, read_document
-from satedge_simulator.io.contact_plan import load_contact_plan
-from satedge_simulator.io.topology import load_topology
-from satedge_simulator.io.workload import load_workload
-from satedge_simulator.io.workload_model import WorkloadModelDoc
-from satedge_simulator.rng.rngs import DEFAULT_SEED
-
-
-class PlannerDoc(Document):
-    """The planner: the solver file, and the computing budget before each contact."""
-
-    solver: str
-    lead_time_s: float | None = None
-
-
-class SimulationDoc(Document):
-    """How the execution is run."""
-
-    end_s: float
-    tolerance_s: float = 1e-4
-    strict: bool = False
-    seed: int = DEFAULT_SEED
 
 
 class ScenarioDoc(Document):
-    """A scenario file. The paths are relative to the file that contains them.
-
-    The workload is a file of requests, a stochastic model, or both: at least one is needed.
-    """
+    """A scenario file. Every path is relative to the file that contains it."""
 
     schema_version: str
+    SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
+    scheduler: str
+    workload: str
+    satellites: str
     topology: str
-    contact_plan: str
-    workload: str | None = None
-    workload_model: WorkloadModelDoc | None = None
-    planner: PlannerDoc
-    simulation: SimulationDoc
 
     @field_validator("schema_version")
     @classmethod
     def _supported_version(cls, value: str) -> str:
-        return check_schema_version(value)
+        return check_schema_version(value, cls.SUPPORTED_VERSION)
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,7 +34,7 @@ class LoadedScenario:
 
     Attributes:
         scenario: The simulation to run.
-        solver_path: The solver file. It is read by the planner, which is chosen separately.
+        solver_path: The scheduler file. It is read by the planner, which is chosen separately.
     """
 
     scenario: Scenario
@@ -71,53 +42,15 @@ class LoadedScenario:
 
 
 def load_scenario(path: str | Path) -> LoadedScenario:
-    """Read the scenario in ``path`` and every file it names.
+    """Read the scenario file in ``path``.
 
     Raises:
-        DocumentError: If a file cannot be read or is not valid, or if the scenario is not
-            consistent. The message names the file.
+        DocumentError: If the file cannot be read or is not valid.
+        NotImplementedError: Always, for now: the scenario only names the files, and building
+            the simulation from them is not written yet.
     """
-    document = read_document(path, ScenarioDoc)
-    base = Path(path).parent
-    if document.workload is None and document.workload_model is None:
-        raise DocumentError(
-            f"{path}: a workload is needed, in the file named by 'workload' "
-            "or in the model 'workload_model'"
-        )
-    requests = (
-        load_workload(base / document.workload) if document.workload is not None else ()
+    read_document(path, ScenarioDoc)
+    raise NotImplementedError(
+        "load_scenario: building the simulation from the paths of the scenario is not "
+        "implemented yet"
     )
-    try:
-        model = (
-            document.workload_model.to_model()
-            if document.workload_model is not None
-            else None
-        )
-    except ScenarioError as error:
-        raise DocumentError(f"{path}: {error}") from error
-    horizon = world_horizon_s(document.simulation.end_s, requests, model)
-    contact_plan = load_contact_plan(base / document.contact_plan, horizon_s=horizon)
-    constellation = load_topology(
-        base / document.topology, contact_plan, horizon_s=horizon
-    )
-    solver_path = base / document.planner.solver
-    if not solver_path.is_file():
-        raise DocumentError(
-            f"{path}: the solver file {document.planner.solver!r} does not exist"
-        )
-    try:
-        scenario = Scenario(
-            constellation=constellation,
-            requests=requests,
-            settings=SimulationSettings(
-                end_s=document.simulation.end_s,
-                tolerance_s=document.simulation.tolerance_s,
-                strict=document.simulation.strict,
-                seed=document.simulation.seed,
-            ),
-            lead_time_s=document.planner.lead_time_s,
-            workload_model=model,
-        )
-    except ScenarioError as error:
-        raise DocumentError(f"{path}: {error}") from error
-    return LoadedScenario(scenario, solver_path)

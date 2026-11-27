@@ -1,154 +1,113 @@
-"""Topology file: a ring constellation, read into a :class:`Constellation`."""
+"""Topology file: the planes of the constellation, their satellites, and the links between them.
+
+A plane is an orbit, even one with a single satellite. Each satellite of a plane has the type of
+a satellite of the satellites file. A link is between two nodes, which are satellites or the
+ground station, and each link states its availability. A plane with ``ring: true`` links its
+satellites in a cycle, always available, so those links need not be written.
+"""
 
 from __future__ import annotations
 
-from enum import StrEnum
 from pathlib import Path
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import Field, model_validator
 
-from satedge_simulator.domain.topology import Constellation
-from satedge_simulator.errors import DocumentError, ScenarioError
-from satedge_simulator.io.base import Document, check_schema_version, read_document
-from satedge_simulator.io.contact_plan import ContactPlan
-from satedge_simulator.io.ring import (
-    DEFAULT_HPC,
-    HpcSchedule,
-    LinkParams,
-    RingConstellationBuilder,
-    RingSpec,
-)
+from satedge_simulator.io.availability import AvailabilityDoc
+from satedge_simulator.io.base import Document, VersionedDocument, read_document
 
 
-class TopologyKind(StrEnum):
-    """The kinds of topology a file can describe."""
+class NodeDoc(Document):
+    """A satellite of a plane: its name, and the type it has in the satellites file."""
 
-    RING_CONSTELLATION = "ring_constellation"
-
-
-class TopologyHeader(BaseModel):
-    """The fields every topology file has, read before the rest to choose the schema."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    schema_version: str
-    kind: str
-
-    @field_validator("schema_version")
-    @classmethod
-    def _supported_version(cls, value: str) -> str:
-        return check_schema_version(value)
+    name: str
+    type: str
 
 
-class HpcDoc(Document):
-    """Computing windows of every satellite, in seconds."""
+class PlaneDoc(Document):
+    """A plane, that is an orbit, with its satellites.
 
-    period_s: float = DEFAULT_HPC.period_s
-    duration_s: float = DEFAULT_HPC.duration_s
-    startup_s: float = DEFAULT_HPC.startup_s
+    ``ring``: whether the satellites are linked in a cycle, in the order they are listed, with
+    links that are always available. A plane of two satellites has one such link; a plane of one
+    has none.
+    """
+
+    name: str
+    ring: bool = False
+    nodes: list[NodeDoc] = Field(min_length=1)
 
 
 class LinkDoc(Document):
-    """Capacity and latency of a family of links."""
+    """A link between two nodes, and when it is available."""
 
-    capacity_gbps: float = 1.0
-    latency_s: float = 0.015
+    a: str
+    b: str
+    availability: AvailabilityDoc
 
-
-class TopologyDoc(Document):
-    """A topology file describing a ring constellation.
-
-    The ground station is ``ground_station``; the satellites are named ``COM<p>`` and
-    ``P<p>-S<k>``. The windows of the COM and ground links come from the contact plan.
-    """
-
-    schema_version: str
-    kind: TopologyKind = TopologyKind.RING_CONSTELLATION
-    ground_station: str = "GS"
-    planes: int = 2
-    satellites_per_plane: int = 9
-    com_index: int = 0
-    horizon_s: float | None = None
-    plmm_capacity_gb: float
-    plmm_overrides_gb: dict[str, float] = Field(default_factory=dict)
-    hpc_rate_gbps: float = 1.0
-    hpc: HpcDoc = Field(default_factory=HpcDoc)
-    hpc_phases_s: dict[str, float] = Field(default_factory=dict)
-    intra_link: LinkDoc = Field(default_factory=LinkDoc)
-    inter_link: LinkDoc = Field(default_factory=LinkDoc)
-    ground_link: LinkDoc = Field(default_factory=LinkDoc)
-
-    @field_validator("schema_version")
-    @classmethod
-    def _supported_version(cls, value: str) -> str:
-        return check_schema_version(value)
-
-    def to_spec(self, horizon_s: float) -> RingSpec:
-        """The parameters of the ring, as the builder needs them, up to ``horizon_s``."""
-        return RingSpec(
-            planes=self.planes,
-            satellites_per_plane=self.satellites_per_plane,
-            com_index=self.com_index,
-            horizon_s=horizon_s,
-            plmm_capacity_gb=self.plmm_capacity_gb,
-            hpc_rate_gbps=self.hpc_rate_gbps,
-            plmm_overrides_gb=self.plmm_overrides_gb,
-            hpc=HpcSchedule(self.hpc.period_s, self.hpc.duration_s, self.hpc.startup_s),
-            hpc_phases_s=self.hpc_phases_s,
-            intra_link=LinkParams(
-                self.intra_link.capacity_gbps, self.intra_link.latency_s
-            ),
-            inter_link=LinkParams(
-                self.inter_link.capacity_gbps, self.inter_link.latency_s
-            ),
-            ground_link=LinkParams(
-                self.ground_link.capacity_gbps, self.ground_link.latency_s
-            ),
-            ground_station_id=self.ground_station,
-        )
+    @model_validator(mode="after")
+    def _two_different_nodes(self) -> LinkDoc:
+        if self.a == self.b:
+            raise ValueError(
+                f"a link joins two different nodes, but both are {self.a!r}"
+            )
+        return self
 
 
-def load_topology(
-    path: str | Path, contact_plan: ContactPlan, horizon_s: float | None = None
-) -> Constellation:
-    """Read the topology in ``path`` and build the constellation, with the windows of ``contact_plan``.
+def _ring_pairs(names: list[str]) -> list[frozenset[str]]:
+    """The node pairs linked by a ring over ``names``, in the order they are listed."""
+    if len(names) < 2:
+        return []
+    if len(names) == 2:
+        return [frozenset(names)]
+    return [
+        frozenset((names[k], names[(k + 1) % len(names)])) for k in range(len(names))
+    ]
 
-    The ``kind`` field selects the schema and the builder. A kind that is not supported is an
-    error that lists the supported ones.
 
-    The computing windows are generated up to the horizon of the file or, if it gives none, up
-    to ``horizon_s``, the end of the simulation. A horizon of the file shorter than
-    ``horizon_s`` is an error: the satellites would stop computing before the end.
+class TopologyDoc(VersionedDocument):
+    """A topology file: the planes, the ground station, and the links with their availability."""
+
+    SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
+    ground_station: str
+    planes: list[PlaneDoc] = Field(min_length=1)
+    links: list[LinkDoc] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _links_refer_to_known_nodes(self) -> TopologyDoc:
+        names = [node.name for plane in self.planes for node in plane.nodes]
+        if len(set(names)) != len(names):
+            raise ValueError("node names must be unique across the planes")
+        if self.ground_station in names:
+            raise ValueError(
+                f"the ground station {self.ground_station!r} is also a satellite"
+            )
+        known = {*names, self.ground_station}
+        for link in self.links:
+            for end in (link.a, link.b):
+                if end not in known:
+                    raise ValueError(
+                        f"link {link.a}-{link.b} refers to unknown node {end!r}"
+                    )
+        implicit = {
+            pair
+            for plane in self.planes
+            if plane.ring
+            for pair in _ring_pairs([node.name for node in plane.nodes])
+        }
+        seen: set[frozenset[str]] = set()
+        for link in self.links:
+            pair = frozenset((link.a, link.b))
+            if pair in seen or pair in implicit:
+                raise ValueError(f"link {link.a}-{link.b} is declared more than once")
+            seen.add(pair)
+        return self
+
+
+def read_topology(path: str | Path) -> TopologyDoc:
+    """Read and validate the topology file in ``path``.
 
     Raises:
-        DocumentError: If the file cannot be read, its kind is not supported, it does not match
-            the schema of its kind, or the topology it describes is not valid. The message
+        DocumentError: If the file cannot be read or does not match the schema. The message
             names the file.
     """
-    header = read_document(path, TopologyHeader)
-    if header.kind == TopologyKind.RING_CONSTELLATION:
-        return _load_ring(path, contact_plan, horizon_s)
-    supported = ", ".join(kind.value for kind in TopologyKind)
-    raise DocumentError(
-        f"{path}: unsupported topology kind {header.kind!r}, supported: {supported}"
-    )
-
-
-def _load_ring(
-    path: str | Path, contact_plan: ContactPlan, horizon_s: float | None
-) -> Constellation:
-    document = read_document(path, TopologyDoc)
-    horizon = document.horizon_s if document.horizon_s is not None else horizon_s
-    if horizon is None:
-        raise DocumentError(
-            f"{path}: the 'horizon_s' of the computing windows is needed"
-        )
-    if horizon_s is not None and horizon < horizon_s:
-        raise DocumentError(
-            f"{path}: the topology generates computing windows up to {horizon:g} s, but the "
-            f"simulation runs up to {horizon_s:g} s"
-        )
-    try:
-        return RingConstellationBuilder(document.to_spec(horizon), contact_plan).build()
-    except ScenarioError as error:
-        raise DocumentError(f"{path}: {error}") from error
+    return read_document(path, TopologyDoc)

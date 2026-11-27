@@ -1,0 +1,15 @@
+# Euristica sequenziale: veloce, senza licenza Gurobi. Non ha un tempo limite: il risultato è
+# pronto quando finisce. lead_time_s è il tempo di anticipo del calcolo sul contatto, obbligatorio.
+#
+# Per il MILP: method: milp, con i suoi parametri nel file stesso. lead_time_s è facoltativo per
+# il MILP; se manca, vale time_limit_s.
+#   method: milp
+#   deadline: hard
+#   lead_time_s: 60            # anticipo del calcolo sul contatto
+#   level: 6                   # livello del MILP, con la capacità della PLMM
+#   warm_start: true           # parte dalla soluzione dell'euristica
+#   time_limit_s: 60           # tempo massimo di risoluzione
+schema_version: "1.0.0"
+method: sequential
+deadline: hard
+lead_time_s: 60

@@ -1,118 +1,106 @@
-"""The results of a simulation, written as ``metrics.json``."""
+"""The results of a simulation, as the file ``metrics.json`` holds them.
+
+This module describes the document and writes it. It knows nothing of the domain: the document
+is built from the objects of the simulation by :mod:`satedge_simulator.export.results`.
+"""
 
 from __future__ import annotations
 
-import json
-from collections.abc import Iterable, Mapping
-from pathlib import Path
-from typing import Any
-
-from satedge_simulator.domain.lifecycle import RequestRecord
-from satedge_simulator.metrics.distribution import Distribution
-from satedge_simulator.metrics.plmm import PlmmUsage
-from satedge_simulator.metrics.requests import ClassMetrics
-from satedge_simulator.metrics.resources import ResourceUsage
-from satedge_simulator.metrics.summary import SimulationMetrics
-from satedge_simulator.planning.adapters.scheduler.verification import AsRunFinding
+from satedge_simulator.io.base import Document
 
 SCHEMA_VERSION = "1.0.0"
 
 
-def results_document(
-    end_s: float,
-    metrics: SimulationMetrics,
-    records: Mapping[str, RequestRecord],
-    findings: Iterable[AsRunFinding],
-) -> dict[str, Any]:
-    """The results as plain JSON values: the metrics, the check of the as-run, each request."""
-    found = list(findings)
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "end_s": end_s,
-        "requests": [_class(c) for c in metrics.requests],
-        "hpcs": {node: _usage(u) for node, u in metrics.hpcs.items()},
-        "arcs": {f"{s}->{t}": _usage(u) for (s, t), u in metrics.arcs.items()},
-        "plmms": {node: _plmm(u) for node, u in metrics.plmms.items()},
-        "epochs": {
-            "epochs": metrics.epochs.epochs,
-            "new": metrics.epochs.new,
-            "accepted": metrics.epochs.accepted,
-            "rejected": metrics.epochs.rejected,
-            "solver_time_s": _distribution(metrics.epochs.solver_time),
-            "overruns": metrics.epochs.overruns,
-            "max_unreachable": metrics.epochs.max_unreachable,
-        },
-        "violations": {kind.value: n for kind, n in metrics.violations.items()},
-        "deviation_s": _distribution(metrics.deviation),
-        "lost_raw": metrics.lost_raw,
-        "verification": {
-            "passed": not found,
-            "findings": [
-                {
-                    "epoch": f.epoch,
-                    "constraint": f.constraint,
-                    "request_id": f.request_id,
-                    "message": f.message,
-                }
-                for f in found
-            ],
-        },
-        "outcomes": {
-            request_id: {
-                "status": record.status.value,
-                "history": [[at, status.value] for at, status in record.history],
-            }
-            for request_id, record in records.items()
-        },
-    }
+class DistributionDoc(Document):
+    """A distribution of values: how many, and its mean, quantiles and maximum."""
+
+    count: int
+    mean: float | None = None
+    p50: float | None = None
+    p95: float | None = None
+    max: float | None = None
 
 
-def write_metrics(
-    path: str | Path,
-    end_s: float,
-    metrics: SimulationMetrics,
-    records: Mapping[str, RequestRecord],
-    findings: Iterable[AsRunFinding],
-) -> None:
-    """Write the results of a simulation to ``path``, creating its directory if needed."""
-    file = Path(path)
-    file.parent.mkdir(parents=True, exist_ok=True)
-    document = results_document(end_s, metrics, records, findings)
-    file.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+class ClassDoc(Document):
+    """The metrics of one priority class."""
+
+    priority: str
+    arrived: int
+    accepted: int
+    rejected: int
+    delivered_on_time: int
+    delivered_late: int
+    failed: int
+    unfinished: int
+    response_from_release_s: DistributionDoc
+    response_from_arrival_s: DistributionDoc
+    tardiness_s: DistributionDoc
 
 
-def _class(c: ClassMetrics) -> dict[str, Any]:
-    return {
-        "priority": c.priority.value,
-        "arrived": c.arrived,
-        "accepted": c.accepted,
-        "rejected": c.rejected,
-        "delivered_on_time": c.delivered_on_time,
-        "delivered_late": c.delivered_late,
-        "failed": c.failed,
-        "unfinished": c.unfinished,
-        "response_from_release_s": _distribution(c.response_from_release),
-        "response_from_arrival_s": _distribution(c.response_from_arrival),
-        "tardiness_s": _distribution(c.tardiness),
-    }
+class UsageDoc(Document):
+    """How much a resource was busy, out of the time it was available."""
+
+    busy_s: float
+    available_s: float
+    utilization: float | None = None
 
 
-def _usage(u: ResourceUsage) -> dict[str, Any]:
-    return {
-        "busy_s": u.busy_s,
-        "available_s": u.available_s,
-        "utilization": u.utilization,
-    }
+class PlmmDoc(Document):
+    """The memory of a PLMM: its capacity, and how much of it was used."""
+
+    capacity_gb: float
+    peak_gb: float
+    mean_gb: float
+    peak_ratio: float | None = None
 
 
-def _plmm(u: PlmmUsage) -> dict[str, Any]:
-    return {
-        "capacity_gb": u.capacity_gb,
-        "peak_gb": u.peak_gb,
-        "mean_gb": u.mean_gb,
-        "peak_ratio": u.peak_ratio,
-    }
+class EpochsDoc(Document):
+    """The decisions of the planner, summed over the epochs."""
+
+    epochs: int
+    new: int
+    accepted: int
+    rejected: int
+    solver_time_s: DistributionDoc
+    overruns: int
+    max_unreachable: int
 
 
-def _distribution(d: Distribution) -> dict[str, Any]:
-    return {"count": d.count, "mean": d.mean, "p50": d.p50, "p95": d.p95, "max": d.max}
+class FindingDoc(Document):
+    """A constraint of the final model that the as-run calendar does not respect."""
+
+    epoch: int
+    constraint: str
+    request_id: str | None = None
+    message: str
+
+
+class VerificationDoc(Document):
+    """The check of the as-run: whether it passed, and each finding."""
+
+    passed: bool
+    findings: list[FindingDoc]
+
+
+class OutcomeDoc(Document):
+    """The final status of a request, and each change of status as ``[time, status]``."""
+
+    status: str
+    history: list[tuple[float, str]]
+
+
+class ResultsDoc(Document):
+    """The results of one simulation."""
+
+    schema_version: str = SCHEMA_VERSION
+    end_s: float
+    requests: list[ClassDoc]
+    hpcs: dict[str, UsageDoc]
+    arcs: dict[str, UsageDoc]
+    plmms: dict[str, PlmmDoc]
+    epochs: EpochsDoc
+    violations: dict[str, int]
+    deviation_s: DistributionDoc
+    lost_raw: int
+    verification: VerificationDoc
+    outcomes: dict[str, OutcomeDoc]

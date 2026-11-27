@@ -1,12 +1,6 @@
-# Scenario del caso studio: 8 ore di costellazione, pianificazione euristica.
+# Scenario del caso studio: contiene solo i path agli altri file.
 schema_version: "1.0.0"
-topology: topology.yaml
-contact_plan: contact_plan.yaml
+scheduler: scheduler.yaml
 workload: workload.yaml
-planner:
-  solver: solver.yaml
-  lead_time_s: 60            # anticipo del calcolo sul contatto; null usa il limite di tempo del solver (solo MILP)
-simulation:
-  end_s: 28800
-  tolerance_s: 1.0e-4
-  strict: false
+satellites: satellites.yaml
+topology: topology.yaml

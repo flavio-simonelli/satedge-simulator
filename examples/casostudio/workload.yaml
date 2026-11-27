@@ -1,5 +1,19 @@
-# Richieste del caso studio, in ordine FIFO per classe.
+# Richieste del caso studio, in ordine FIFO per classe. kind: explicit elenca le richieste.
+#
+# Versione stocastica: kind: stochastic, con il modello al posto di requests. Il raw e il numero
+# di task sono estratti uniformemente tra [a, b]; tempo di calcolo e output di ogni task sono
+# log-normali, descritte da media e coefficiente di variazione. Esempio:
+#   schema_version: "1.0.0"
+#   kind: stochastic
+#   arrivals_per_hour: 4             # processo di Poisson degli arrivi a terra
+#   urgent_probability: 0.5          # probabilità che una richiesta sia urgente
+#   raw_size_gb: [2, 12]             # dimensione del raw di ogni richiesta
+#   tasks_per_request: [1, 3]        # numero di task di ogni richiesta
+#   task:                            # ogni task estrae i suoi valori da queste log-normali
+#     execution_s: {mean: 120, cv: 0.5}     # tempo di calcolo: media 120 s, cv 0.5
+#     output_size_gb: {mean: 0.2, cv: 0.8}  # dimensione dell'output: media 0.2 Gb, cv 0.8
 schema_version: "1.0.0"
+kind: explicit
 requests:
 - id: R1
   priority: urgent

@@ -6,7 +6,7 @@ import pytest
 
 from satedge_simulator.domain.workload import Priority
 from satedge_simulator.errors import DocumentError
-from satedge_simulator.io.workload import load_workload
+from satedge_simulator.loading.workload import load_workload
 
 
 def write(tmp_path: Path, text: str) -> Path:
