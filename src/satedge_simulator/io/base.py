@@ -118,7 +118,7 @@ class Registry[T: Document]:
 
     A file names its variant with ``field`` (for example ``method``). Each variant class registers
     itself with :meth:`variant`, so the registry never lists the variants: a new variant is a new
-    class, and the others are not touched. Each class checks the major version of its own file.
+    class, and the others are not touched. Each class states which version of its file it reads.
     """
 
     def __init__(self, field: str) -> None:

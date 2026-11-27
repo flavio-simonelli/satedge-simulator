@@ -1,7 +1,7 @@
-"""Scheduler file: the planner the scenario uses, its method, its deadlines and its lead time.
+"""Scheduler file: the method of the planner, and its parameters.
 
-The method is the sequential heuristic, or the MILP, and it is the discriminator of the file. Only
-the MILP has a time limit, so the time limit is one of its parameters.
+The ``method`` field says which variant of the file it is: the sequential heuristic, or the MILP.
+Each variant has its own fields. The values of the numbers are not checked here.
 """
 
 from __future__ import annotations
@@ -9,8 +9,6 @@ from __future__ import annotations
 from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar, Literal
-
-from pydantic import Field
 
 from satedge_simulator.io.base import Registry, VersionedDocument, read_variant
 
@@ -23,16 +21,20 @@ class SchedulerMethod(StrEnum):
 
 
 class DeadlineKind(StrEnum):
-    """Whether a missed deadline makes a request infeasible, or only counts as a late delivery."""
+    """The kind of deadline the planner works with."""
 
     HARD = "hard"
     SOFT = "soft"
 
 
 class SchedulerDoc(VersionedDocument):
-    """A scheduler file, whatever its method: what every method has.
+    """The fields that a scheduler file has with every method.
 
     Each method is a subclass, registered in :data:`SCHEDULERS` under its method name.
+
+    Attributes:
+        schema_version: Version of the format of the file.
+        deadline: Whether the deadlines are hard or soft.
     """
 
     deadline: DeadlineKind
@@ -43,32 +45,36 @@ SCHEDULERS: Registry[SchedulerDoc] = Registry("method")
 
 @SCHEDULERS.variant("sequential")
 class SequentialSchedulerDoc(SchedulerDoc):
-    """The sequential heuristic. It has no time limit, so its result is ready when it finishes.
+    """The scheduler file of the sequential heuristic.
 
-    ``lead_time_s`` is how long before a contact the scheduling starts. It is required, since
-    there is no time limit to take its place.
+    Attributes:
+        method: Always ``sequential``.
+        lead_time_s: Lead time of the planning, in seconds.
     """
 
     SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
     method: Literal[SchedulerMethod.SEQUENTIAL]
-    lead_time_s: float = Field(gt=0)
+    lead_time_s: float
 
 
 @SCHEDULERS.variant("milp")
 class MilpSchedulerDoc(SchedulerDoc):
-    """The MILP, with its level, its warm start and its time limit.
+    """The scheduler file of the MILP.
 
-    ``lead_time_s`` may be left out: it is then the time limit. ``level`` is the level of the
-    MILP, with the capacity of the PLMM. ``warm_start`` says whether the MILP starts from the
-    solution of the sequential heuristic.
+    Attributes:
+        method: Always ``milp``.
+        lead_time_s: Lead time of the planning, in seconds. It may be left out.
+        level: Level of the MILP.
+        warm_start: Whether the MILP starts from a warm start.
+        time_limit_s: Time limit of the solver, in seconds.
     """
 
     SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
     method: Literal[SchedulerMethod.MILP]
-    lead_time_s: float | None = Field(default=None, gt=0)
+    lead_time_s: float | None = None
     level: int
     warm_start: bool
-    time_limit_s: float = Field(gt=0)
+    time_limit_s: float
 
 
 class SchedulerFile:
@@ -76,10 +82,11 @@ class SchedulerFile:
 
     @classmethod
     def read(cls, path: str | Path) -> SchedulerDoc:
-        """Read and validate the scheduler file in ``path``, as the variant it names.
+        """Read the scheduler file in ``path``, with the schema of the method it names.
 
         Raises:
-            DocumentError: If the file cannot be read, does not match the schema of its method and
-                version, or names no known method. The message names the file.
+            DocumentError: If the format is unknown, the file cannot be read or its text is not
+                valid in its format, it names no known method, it does not match the schema of
+                its method, or its version is not supported. The message names the file.
         """
         return read_variant(path, SCHEDULERS)

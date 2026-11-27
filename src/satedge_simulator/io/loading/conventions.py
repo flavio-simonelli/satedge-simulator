@@ -9,10 +9,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from types import MappingProxyType
 
+from satedge_simulator.domain.quantities import Duration
 from satedge_simulator.domain.requests import Priority
 
-DEFAULT_DEADLINE_AFTER_RELEASE_S: Mapping[Priority, float] = MappingProxyType(
-    {Priority.URGENT: 7200.0, Priority.NON_URGENT: 25200.0}
+DEFAULT_DEADLINE_AFTER_RELEASE: Mapping[Priority, Duration] = MappingProxyType(
+    {Priority.URGENT: Duration(7200.0), Priority.NON_URGENT: Duration(25200.0)}
 )
 """Delay after the release within which each class must be delivered when the file does not
 state the deadline: 2 hours for the urgent requests, 7 hours for the others."""

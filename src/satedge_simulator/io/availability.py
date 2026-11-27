@@ -1,7 +1,8 @@
-"""Availability: when something can be used, written as always, periodically, or in windows.
+"""Availability: how a file writes when something can be used.
 
-The HPC of a satellite and the links of the topology both have an availability, so both use the
-types of this module.
+An availability has one of three forms, and its ``kind`` field says which one. The topology file
+uses it for the links, and its single windows for the HPCs whose windows are listed. The values
+are not checked here: whether they are meaningful is for the code that builds the domain.
 """
 
 from __future__ import annotations
@@ -23,34 +24,57 @@ class AvailabilityKind(StrEnum):
 
 
 class WindowDoc(Document):
-    """One window of availability, in seconds."""
+    """One window of time.
 
-    start_s: float = Field(ge=0)
+    Attributes:
+        start_s: Instant the window opens, in seconds.
+        end_s: Instant the window closes, in seconds.
+    """
+
+    start_s: float
     end_s: float
 
 
 class AlwaysDoc(Document):
-    """Available at every instant."""
+    """Available at every instant.
+
+    Attributes:
+        kind: Always ``always``.
+    """
 
     kind: Literal[AvailabilityKind.ALWAYS]
 
 
 class PeriodicDoc(Document):
-    """Available once every ``period_s``, for ``duration_s``, the first time from ``first_start_s``."""
+    """Available in one window in each period.
+
+    Attributes:
+        kind: Always ``periodic``.
+        first_start_s: Instant the first window opens, in seconds. It may be left out: it is
+            then 0.
+        period_s: Time between the openings of two consecutive windows, in seconds.
+        duration_s: Length of each window, in seconds.
+    """
 
     kind: Literal[AvailabilityKind.PERIODIC]
-    first_start_s: float = Field(default=0, ge=0)
-    period_s: float = Field(gt=0)
-    duration_s: float = Field(gt=0)
+    first_start_s: float = 0
+    period_s: float
+    duration_s: float
 
 
 class WindowsDoc(Document):
-    """Available in each of the listed windows, which are sorted and do not overlap."""
+    """Available in the listed windows.
+
+    Attributes:
+        kind: Always ``windows``.
+        windows: The windows, as the file lists them.
+    """
 
     kind: Literal[AvailabilityKind.WINDOWS]
-    windows: list[WindowDoc] = Field(min_length=1)
+    windows: list[WindowDoc]
 
 
 AvailabilityDoc = Annotated[
     AlwaysDoc | PeriodicDoc | WindowsDoc, Field(discriminator="kind")
 ]
+"""An availability of any of the three forms. Its ``kind`` field says which one."""

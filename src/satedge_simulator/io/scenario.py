@@ -1,8 +1,10 @@
-"""Scenario file: the paths to the files that describe the scheduler, the workload, the satellites
-and the topology, read together and checked against each other.
+"""Scenario file: the paths of the scheduler, workload, satellites and topology files.
 
-This module reads the documents only. The objects of the simulation are built from them by
-:mod:`satedge_simulator.loading.scenario`.
+This module reads the five files together and checks some of the names that one file takes from
+another: the types of the satellites, and the origins of the explicit requests.
+
+It reads the documents only. The objects of the domain are built from them by
+:mod:`satedge_simulator.io.loading.scenario`.
 """
 
 from __future__ import annotations
@@ -20,7 +22,15 @@ from satedge_simulator.io.workload import ExplicitWorkloadDoc, WorkloadDoc, Work
 
 
 class ScenarioDoc(VersionedDocument):
-    """A scenario file. Every path is relative to the file that contains it."""
+    """The content of a scenario file. Every path is relative to the directory of that file.
+
+    Attributes:
+        schema_version: Version of the format of the file.
+        scheduler: Path of the scheduler file.
+        workload: Path of the workload file.
+        satellites: Path of the satellites file.
+        topology: Path of the topology file.
+    """
 
     SUPPORTED_VERSION: ClassVar[tuple[int, int]] = (1, 0)
     scheduler: str
@@ -49,11 +59,12 @@ class ScenarioFiles:
 
 
 def read_scenario(path: str | Path) -> ScenarioFiles:
-    """Read the scenario in ``path`` and the four files it names, and check them together.
+    """Read the scenario in ``path`` and the four files it names, and check their references.
 
     Raises:
-        DocumentError: If a file cannot be read or is not valid, or if the files do not agree
-            with each other. The message names the file.
+        DocumentError: If a file cannot be read or is not valid, if a satellite has a type that
+            the satellites file does not define, or if an explicit request starts from a name
+            that is not a satellite of the topology. The message names a file.
     """
     scenario = read_document(path, ScenarioDoc)
     base = Path(path).parent
@@ -69,20 +80,18 @@ def read_scenario(path: str | Path) -> ScenarioFiles:
 
 
 def _check_references(path: str | Path, files: ScenarioFiles) -> None:
-    """The names used by one file must be defined by the others.
-
-    This is about the references only: whether a value is meaningful is for the domain.
-    """
-    nodes = {node.name: node for plane in files.topology.planes for node in plane.nodes}
-    for node in nodes.values():
+    """Check that the satellite types and the request origins are defined."""
+    nodes = [node for plane in files.topology.planes for node in plane.nodes]
+    for node in nodes:
         if node.type not in files.satellites:
             raise DocumentError(
                 f"{path}: node {node.name} has the type {node.type!r}, "
                 "which the satellites file does not define"
             )
     if isinstance(files.workload, ExplicitWorkloadDoc):
+        names = {node.name for node in nodes}
         for request in files.workload.requests:
-            if request.origin not in nodes:
+            if request.origin not in names:
                 raise DocumentError(
                     f"{path}: request {request.id} starts from {request.origin!r}, "
                     "which is not a satellite of the topology"

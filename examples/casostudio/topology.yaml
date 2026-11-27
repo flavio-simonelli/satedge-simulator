@@ -10,102 +10,122 @@ planes:
   - name: P1
     kind: periodic
     period_s: 5640
-    duration_s: 300
     nodes:
-      - {name: COM1, type: com, first_start_s: 0}
-      - {name: P1-S1, type: sar, first_start_s: 0}
-      - {name: P1-S2, type: sar, first_start_s: 0}
-      - {name: P1-S3, type: sar, first_start_s: 0}
-      - {name: P1-S4, type: sar, first_start_s: 0}
-      - {name: P1-S5, type: sar, first_start_s: 0}
-      - {name: P1-S6, type: sar, first_start_s: 0}
-      - {name: P1-S7, type: sar, first_start_s: 0}
-      - {name: P1-S8, type: sar, first_start_s: 0}
+      - {name: COM1, type: com, first_start_s: 0, duration_s: 300}
+      - {name: P1-S1, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P1-S2, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P1-S3, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P1-S4, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P1-S5, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P1-S6, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P1-S7, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P1-S8, type: sar, first_start_s: 0, duration_s: 300}
   - name: P2
     kind: periodic
     period_s: 5640
-    duration_s: 300
     nodes:
-      - {name: COM2, type: com, first_start_s: 0}
-      - {name: P2-S1, type: sar, first_start_s: 0}
-      - {name: P2-S2, type: sar, first_start_s: 0}
-      - {name: P2-S3, type: sar, first_start_s: 0}
-      - {name: P2-S4, type: sar, first_start_s: 0}
-      - {name: P2-S5, type: sar, first_start_s: 0}
-      - {name: P2-S6, type: sar, first_start_s: 0}
-      - {name: P2-S7, type: sar, first_start_s: 0}
-      - {name: P2-S8, type: sar, first_start_s: 0}
+      - {name: COM2, type: com, first_start_s: 0, duration_s: 300}
+      - {name: P2-S1, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P2-S2, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P2-S3, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P2-S4, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P2-S5, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P2-S6, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P2-S7, type: sar, first_start_s: 0, duration_s: 300}
+      - {name: P2-S8, type: sar, first_start_s: 0, duration_s: 300}
 links:
   - a: COM1
     b: COM2
+    latency_s: 0.015
     availability:
       kind: windows
       windows: [{start_s: 1500, end_s: 2100}, {start_s: 7140, end_s: 7740}, {start_s: 12780, end_s: 13380}, {start_s: 18420, end_s: 19020}, {start_s: 24060, end_s: 24660}]
   - a: COM1
     b: GS
+    latency_s: 0.015
     availability:
       kind: windows
       windows: [{start_s: 2400, end_s: 2580}, {start_s: 5220, end_s: 5400}, {start_s: 8040, end_s: 8220}, {start_s: 10860, end_s: 11040}, {start_s: 13680, end_s: 13860}, {start_s: 16500, end_s: 16680}, {start_s: 19320, end_s: 19500}, {start_s: 22140, end_s: 22320}, {start_s: 24960, end_s: 25140}, {start_s: 27780, end_s: 27960}]
   - a: COM2
     b: GS
+    latency_s: 0.015
     availability:
       kind: windows
       windows: [{start_s: 3900, end_s: 4080}, {start_s: 6720, end_s: 6900}, {start_s: 9540, end_s: 9720}, {start_s: 12360, end_s: 12540}, {start_s: 15180, end_s: 15360}, {start_s: 18000, end_s: 18180}, {start_s: 20820, end_s: 21000}, {start_s: 23640, end_s: 23820}, {start_s: 26460, end_s: 26640}]
 #   Forma periodica, per un link che si apre sempre uguale:
 #   - a: COM2
 #     b: GS
+#     latency_s: 0.015
 #     availability: {kind: periodic, first_start_s: 3900, period_s: 2820, duration_s: 180}
   - a: COM1
     b: P1-S1
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S1
     b: P1-S2
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S2
     b: P1-S3
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S3
     b: P1-S4
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S4
     b: P1-S5
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S5
     b: P1-S6
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S6
     b: P1-S7
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S7
     b: P1-S8
+    latency_s: 0.015
     availability: {kind: always}
   - a: P1-S8
     b: COM1
+    latency_s: 0.015
     availability: {kind: always}
   - a: COM2
     b: P2-S1
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S1
     b: P2-S2
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S2
     b: P2-S3
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S3
     b: P2-S4
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S4
     b: P2-S5
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S5
     b: P2-S6
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S6
     b: P2-S7
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S7
     b: P2-S8
+    latency_s: 0.015
     availability: {kind: always}
   - a: P2-S8
     b: COM2
+    latency_s: 0.015
     availability: {kind: always}
